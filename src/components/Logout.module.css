@@ -1,0 +1,16 @@
+.btn {
+  background-color: #60a5fa;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
