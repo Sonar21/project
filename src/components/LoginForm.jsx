@@ -1,11 +1,20 @@
 "use client";
 
+<<<<<<< HEAD
 import React, { useState } from "react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "./LoginForm.module.css";
 import Image from "next/image";
+=======
+const LoginForm = () => {
+    return (
+        <form action={doSocialLogin}>
+            <button className="bg-pink-400 text-white p-1 rounded-md m-1 text-lg" type="submit" name="action" value="google">
+                change with google
+            </button>
+>>>>>>> 22a873f650799931b24e43944f3f0be5980dbd5c
 
 const SignInPage = () => {
   const [loading, setLoading] = useState(false);
