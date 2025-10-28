@@ -1,0 +1,108 @@
+.courses-page {
+  font-family: "Segoe UI", sans-serif;
+  background-color: #f8fafc;
+  padding: 24px;
+  color: #333;
+  min-height: 100vh;
+}
+
+.courses-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.courses-header h2 {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.add-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.courses-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.courses-table th,
+.courses-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+}
+
+.view-btn,
+.edit-btn,
+.delete-btn {
+  margin-right: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.view-btn {
+  background: #e6f0ff;
+  color: #2563eb;
+}
+.edit-btn {
+  background: #fff4e6;
+  color: #d97706;
+}
+.delete-btn {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.add-modal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.modal-content {
+  background: white;
+  padding: 18px;
+  border-radius: 8px;
+  width: 420px;
+  box-shadow: 0 8px 30px rgba(2, 6, 23, 0.08);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.save-btn {
+  background: #16a34a;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+}
+.cancel-btn {
+  background: #f3f4f6;
+  color: #111827;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+}

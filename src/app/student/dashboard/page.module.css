@@ -1,0 +1,200 @@
+
+
+/* ページコンテナ */
+.container {
+  width: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+
+.tabs {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  gap: 12px;
+  margin: 24px 0 18px;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 10px 10px 0 0;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tab:hover {
+  color: var(--accent);
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom: 3px solid var(--accent);
+}
+
+/* active 用の単独クラスをエクスポートしておく（モジュールで扱いやすくするため） */
+.active {
+  color: var(--accent);
+  border-bottom: 3px solid var(--accent);
+}
+
+/* ログアウトボタン */
+.logout {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* カード */
+.card {
+  width: 100%;
+  max-width: 980px;
+  background: var(--card);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(30, 41, 59, 0.06);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(15, 23, 42, 0.03);
+}
+
+/* タイトル */
+.title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+/* 進捗バー */
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+/* 進捗の右側パーセント表示 */
+.percent {
+  font-weight: 700;
+}
+
+.progress-wrap {
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.04),
+    rgba(15, 23, 42, 0.02)
+  );
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(37, 99, 235, 0.95),
+    rgba(37, 99, 235, 0.7)
+  );
+  border-radius: 999px;
+  transition: width 600ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+/* 学費ステータス */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.stat {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), var(--glass));
+  padding: 14px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(2, 6, 23, 0.03);
+  border: 1px solid rgba(2, 6, 23, 0.03);
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stat-value {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.stat-value.paid {
+  color: var(--success);
+}
+
+.stat-value.remain {
+  color: var(--warn);
+}
+
+/* 支払い状態用の単体クラス（モジュールで利用するため） */
+.paid {
+  color: var(--success);
+}
+
+.remain {
+  color: var(--warn);
+}
+
+/* 支払い期限 */
+.notice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(250, 244, 224, 0.9),
+    rgba(255, 255, 255, 0.6)
+  );
+  border: 1px solid rgba(241, 245, 249, 0.6);
+}
+
+.notice-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.notice-value {
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.icon {
+  font-size: 22px;
+  opacity: 0.95;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 760px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+  .tabs {
+    gap: 8px;
+    justify-content: space-around;
+  }
+  .card {
+    padding: 18px;
+  }
+}

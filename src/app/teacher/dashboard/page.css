@@ -1,0 +1,85 @@
+/* Copied from page.module.css to allow global import from the teacher page
+   If you prefer CSS Modules, import page.module.css and update the JSX to use
+   the `styles` object. For quick fix we provide this global CSS file. */
+.dashboard {
+  font-family: "Segoe UI", sans-serif;
+  background-color: #f8fafc;
+  padding: 24px;
+  color: #333;
+  min-height: 100vh;
+}
+
+/* Header */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.dashboard-header h1 {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.dashboard-header span {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Stats cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  transition: 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+}
+
+.stat-title {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: bold;
+  margin: 6px 0;
+}
+
+.stat-sub {
+  font-size: 0.8rem;
+  color: #6aaa64;
+}
+
+/* Charts grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.chart-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #444;
+}
