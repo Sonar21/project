@@ -7,6 +7,16 @@ import Link from "next/link";
 import styles from "./LoginForm.module.css";
 import Image from "next/image";
 
+const LoginForm = () => {
+    return (
+        <form action={doSocialLogin}>
+            <button className="bg-pink-400 text-white p-1 rounded-md m-1 text-lg" type="submit" name="action" value="google">
+                change with google
+            </button>
+        </form>
+    );
+};
+
 const SignInPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

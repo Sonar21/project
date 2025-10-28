@@ -27,23 +27,46 @@ export const authOptions = {
       // On initial sign in, `user` will be present. Ensure local user exists and attach role/course/tuition.
       if (user) {
         const local = createOrGetUserByEmail(user.email, user.name);
+        // debug: log sign-in info to help diagnose role assignment
+        try {
+          console.info("NextAuth sign-in:", {
+            email: user.email,
+            displayName: user.name,
+            localRole: local?.role,
+            studentId: local?.studentId,
+          });
+        } catch (e) {
+          /* ignore logging errors */
+        }
         token.role = local.role || token.role || "student";
         token.studentId = local.studentId || token.studentId;
-  token.course = local.course || null;
-  token.tuition = local.course ? getTuitionForCourse(local.course) : null;
-  token.courseName = local.course ? (getCourse(local.course)?.name || null) : null;
+        token.course = local.course || null;
+        token.tuition = local.course ? getTuitionForCourse(local.course) : null;
+        token.courseName = local.course
+          ? getCourse(local.course)?.name || null
+          : null;
         token.email = user.email;
       } else if (token.email) {
         // subsequent requests: refresh role/course/tuition from local store
         const local = getUserByEmail(token.email);
         if (local) {
+          // debug: log token refresh info
+          try {
+            console.info("NextAuth token refresh:", {
+              email: token.email,
+              storedRole: local.role,
+              storedStudentId: local.studentId,
+            });
+          } catch (e) {}
           token.role = local.role || token.role;
           token.studentId = local.studentId || token.studentId;
           token.course = local.course || token.course;
           token.tuition = local.course
             ? getTuitionForCourse(local.course)
             : token.tuition || null;
-          token.courseName = local.course ? (getCourse(local.course)?.name || token.courseName || null) : token.courseName || null;
+          token.courseName = local.course
+            ? getCourse(local.course)?.name || token.courseName || null
+            : token.courseName || null;
         }
       }
       token.role = token.role || "student";
@@ -57,12 +80,22 @@ export const authOptions = {
       session.user.course = token.course || null;
       session.user.tuition = token.tuition || null;
       session.user.courseName = token.courseName || null;
+      // debug: log session user info on session creation
+      try {
+        console.info("NextAuth session created:", {
+          email: session.user.email,
+          role: session.user.role,
+          studentId: session.user.studentId,
+          course: session.user.course,
+        });
+      } catch (e) {}
       return session;
     },
 
-    // Always redirect to /student after sign in
+    // Redirect to a shared auth redirect route; that page will server-side
+    // inspect the session and send the user to the correct dashboard based on role.
     async redirect({ url, baseUrl }) {
-      return `${baseUrl}/student/dashboard`;
+      return `${baseUrl}/auth/redirect`;
     },
   },
 };
