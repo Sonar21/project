@@ -25,13 +25,24 @@ export default function CoursesPage() {
       return alert("Please fill all fields");
     // convert fee like ¥900,000 or 900000 to number
     const t = Number(String(newCourse.fee).replace(/[^0-9]/g, "")) || 0;
-    await fetch("/api/admin/courses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newCourse.name, tuition: t }),
-    });
+    try {
+      const res = await fetch("/api/admin/courses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCourse.name, tuition: t }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        // update local list
+        await refresh();
+        // Server API writes to Firestore; no client-side write here.
+      } else {
+        console.error("Failed to create course", res.status);
+      }
+    } catch (err) {
+      console.error("Error creating course:", err);
+    }
     setNewCourse({ name: "", fee: "" });
-    await refresh();
     document.querySelector(".add-modal").style.display = "none";
   };
 
@@ -43,6 +54,7 @@ export default function CoursesPage() {
       body: JSON.stringify({ code }),
     });
     await refresh();
+    // Server API deletes from Firestore; no client-side delete here.
   };
 
   const handleEditCourse = async (code, currentTuition) => {
@@ -53,12 +65,24 @@ export default function CoursesPage() {
     if (input === null) return; // cancelled
     const t = Number(String(input).replace(/[^0-9]/g, ""));
     if (Number.isNaN(t)) return alert("無効な金額です");
-    await fetch("/api/admin/courses", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, tuition: t }),
-    });
-    await refresh();
+    try {
+      const res = await fetch("/api/admin/courses", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, tuition: t }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        // update local list
+        await refresh();
+        // update Firestore using returned object
+        // Server API updated Firestore; no client-side write here.
+      } else {
+        console.error("Failed to update course", res.status);
+      }
+    } catch (err) {
+      console.error("Error updating course:", err);
+    }
   };
 
   const fmt = (n) =>

@@ -28,7 +28,21 @@ export function getTuitionForCourse(code) {
 }
 
 export function addCourse(name, tuition) {
-  const base = slugify(name || "course");
+  // If a course with the same normalized name exists, update it instead
+  const normalized = slugify(name || "course");
+  for (const [key, val] of courses.entries()) {
+    if (slugify(val.name) === normalized) {
+      // update tuition if provided
+      const t = Number(String(tuition).replace(/[^0-9]/g, ""));
+      if (!Number.isNaN(t)) val.tuition = t;
+      val.name = name || val.name;
+      courses.set(key, val);
+      return val;
+    }
+  }
+
+  // create new code when no existing match
+  const base = normalized;
   let code = base;
   let i = 1;
   while (courses.has(code)) {

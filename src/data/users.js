@@ -104,6 +104,41 @@ export function setUserCourse(studentId, course) {
   };
 }
 
+// Update arbitrary user fields (name, email, course, etc.)
+export function updateUser(studentId, fields = {}) {
+  const key = String(studentId).toLowerCase();
+  const u = users.get(key);
+  if (!u) return null;
+  // Only allow a small set of updatable fields
+  const allowed = ["name", "email", "course", "role"];
+  for (const k of Object.keys(fields)) {
+    if (!allowed.includes(k)) continue;
+    u[k] = fields[k];
+  }
+  // If email changed, also move map key if needed
+  if (fields.email && typeof fields.email === "string") {
+    const newLocal = String(fields.email).split("@")[0].toLowerCase();
+    if (newLocal && newLocal !== key) {
+      users.delete(key);
+      u.studentId = newLocal;
+      users.set(newLocal, u);
+    } else {
+      users.set(key, u);
+    }
+  } else {
+    users.set(key, u);
+  }
+
+  return {
+    id: u.id,
+    studentId: u.studentId,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    course: u.course || null,
+  };
+}
+
 export function updateUserRole(studentId, newRole) {
   const key = String(studentId).toLowerCase();
   const u = users.get(key);
