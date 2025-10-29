@@ -21,9 +21,9 @@ export default function TeacherDashboard() {
 
   const stats = [
     { title: "コース名", value: "1,247", sub: "+12% from last month", color: "#4F9DDE" },
-    // { title: "収益合計", value: "$2.4M", sub: "+8% from last month", color: "#57C785" },
-    // { title: "アクティブコース", value: "24", sub: "2 new this semester", color: "#F0B84C" },
-    // { title: "支払い率", value: "89%", sub: "+3% from last month", color: "#6C63FF" },
+    { title: "収益合計", value: "$2.4M", sub: "+8% from last month", color: "#57C785" },
+    { title: "アクティブコース", value: "24", sub: "2 new this semester", color: "#F0B84C" },
+    { title: "支払い率", value: "89%", sub: "+3% from last month", color: "#6C63FF" },
   ];
 
 

@@ -1,0 +1,215 @@
+/* src/app/student/dashboard/page.module.css */
+.page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  padding: 24px;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial;
+  color: #0f172a;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sessionRight {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.userName {
+  font-weight: 600;
+}
+
+.logout {
+  background: transparent;
+  border: 1px solid #e6e6e9;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+}
+
+/* left */
+.leftCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 6px 18px rgba(11, 23, 47, 0.04);
+}
+
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 12px;
+  background: #eef2ff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #2563eb;
+  width: 30%;
+  transition: width 0.45s ease;
+}
+
+.progressText {
+  width: 60px;
+  text-align: right;
+  font-weight: 600;
+  color: #374151;
+}
+
+.amountRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.cardSmall {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f0f6ff;
+  border: 1px solid #eef3ff;
+  text-align: center;
+}
+
+.amount {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.cardLabel {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.infoBox {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff9e6;
+  border: 1px solid #fff0d9;
+  margin-bottom: 16px;
+}
+
+.deadline {
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.primaryBtn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.secondaryBtn {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e6e6e9;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* right */
+.rightCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid #eef2f6;
+  height: fit-content;
+}
+
+.profileBox {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  background: #2563eb;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.profileText {
+}
+
+.profileName {
+  font-weight: 700;
+}
+
+.smallText {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.safeNote {
+  margin-top: 12px;
+  color: #10b981;
+  font-size: 13px;
+}
+
+/* center utility */
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 12px;
+  padding: 20px;
+}
