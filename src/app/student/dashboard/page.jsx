@@ -2,8 +2,19 @@
 
 import React, { useEffect, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/clientApp";
+import {
+  doc,
+  updateDoc,
+  addDoc,
+  collection,
+  onSnapshot,
+  serverTimestamp,
+  query,
+  where,
+  orderBy,
+} from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import styles from "./page.module.css";
 
 export default function StudentDashboardPage() {
@@ -12,15 +23,66 @@ export default function StudentDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [courseTuition, setCourseTuition] = useState(null);
   const [activeTab, setActiveTab] = useState("overview"); // タブ状態
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [payments, setPayments] = useState([]); // 🔹 支払い履歴を保存する配列
 
+  // 📸 レシートアップロード関数（支払い情報を記録）
+  const handleReceiptUpload = async () => {
+    if (!file || !student) return alert("ファイルを選択してください。");
+
+    // 金額チェック
+    const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
+    if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
+      return alert("有効な金額を入力してください（例: 80000）");
+    }
+    setUploading(true);
+
+    try {
+      // 1️⃣ Storage にファイルをアップロード
+      const storage = getStorage();
+      const fileRef = ref(
+        storage,
+        `receipts/${student.studentId}/${Date.now()}_${file.name}`
+      );
+      await uploadBytes(fileRef, file);
+
+      // 2️⃣ URLを取得
+      const url = await getDownloadURL(fileRef);
+
+      // 3️⃣ Firestoreに支払い情報を追加
+      const paymentsRef = collection(db, "payments");
+      await addDoc(paymentsRef, {
+        studentId: student.studentId,
+        course: student.course || "未設定",
+        receiptUrl: url,
+        amount: numericAmount, // 入力金額
+        paymentMethod: "銀行振込", // 支払い方法（例）
+        status: "支払い済み", // 支払い状態
+        createdAt: serverTimestamp(), // 支払った日時（自動）
+      });
+
+      alert("支払い情報を保存しました！");
+      setFile(null);
+      setAmount("");
+    } catch (err) {
+      console.error("アップロードエラー:", err);
+      alert("アップロードに失敗しました。");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // 🔹 ログイン中の学生情報をFirestoreからリアルタイム取得
   useEffect(() => {
-    // Listen to the student's Firestore document in real-time.
     if (status !== "authenticated") {
       setLoading(false);
       return;
     }
 
-    const studentId = session?.user?.studentId ||
+    const studentId =
+      session?.user?.studentId ||
       String(session?.user?.email || "").split("@")[0];
     if (!studentId) {
       setStudent(null);
@@ -34,26 +96,10 @@ export default function StudentDashboardPage() {
       async (snap) => {
         if (snap.exists()) {
           setStudent({ ...snap.data(), studentId });
-          setLoading(false);
         } else {
-          // If there's no Firestore student doc, fall back to existing API
-          try {
-            const res = await fetch(
-              `/api/student/profile?studentId=${encodeURIComponent(studentId)}`
-            );
-            if (res.ok) {
-              const data = await res.json();
-              setStudent(Object.keys(data).length ? data : null);
-            } else {
-              setStudent(null);
-            }
-          } catch (err) {
-            console.error("Error fetching student profile fallback:", err);
-            setStudent(null);
-          } finally {
-            setLoading(false);
-          }
+          setStudent(null);
         }
+        setLoading(false);
       },
       (err) => {
         console.error("Student snapshot error:", err);
@@ -65,14 +111,13 @@ export default function StudentDashboardPage() {
     return () => unsub();
   }, [status, session]);
 
-  // Listen to Firestore course tuition for the student's enrolled course (real-time)
+  // 🔹 コースの学費をリアルタイム取得
   useEffect(() => {
     if (!student?.course) {
       setCourseTuition(null);
       return;
     }
-    const courseCode = String(student.course);
-    const docRef = doc(db, "courses", courseCode);
+    const docRef = doc(db, "courses", String(student.course));
     const unsub = onSnapshot(
       docRef,
       (snap) => {
@@ -91,10 +136,33 @@ export default function StudentDashboardPage() {
     return () => unsub();
   }, [student?.course]);
 
+  // 🔹 支払い履歴をリアルタイム取得
+  useEffect(() => {
+    if (!student?.studentId) return;
+
+    const paymentsRef = collection(db, "payments");
+    const q = query(
+      paymentsRef,
+      where("studentId", "==", student.studentId),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPayments(data);
+    });
+
+    return () => unsub();
+  }, [student?.studentId]);
+
+  // 🔹 ローディング・未ログイン時の表示
   if (status === "loading" || loading) {
     return (
       <div className={styles.center}>
-        <h3>Loading your dashboard...</h3>
+        <h3>読み込み中です...</h3>
       </div>
     );
   }
@@ -102,16 +170,15 @@ export default function StudentDashboardPage() {
   if (status === "unauthenticated") {
     return (
       <div className={styles.center}>
-        <h2>Please sign in to view your student dashboard</h2>
+        <h2>サインインしてください</h2>
         <button className={styles.primaryBtn} onClick={() => signIn()}>
-          Sign In
+          サインイン
         </button>
       </div>
     );
   }
 
-  const name = student?.name || session.user.name || "Student";
-  // Prefer real-time course tuition from Firestore when available; otherwise fall back to server-side stored totalFees
+  // 🔹 支払い状況計算
   const total = (courseTuition ?? student?.totalFees) || 0;
   const paid = student?.paidAmount || 0;
   const remaining = total - paid;
@@ -119,7 +186,7 @@ export default function StudentDashboardPage() {
 
   return (
     <main className={styles.container}>
-      {/* 🔹タブメニュー */}
+      {/* 🔹 タブメニュー */}
       <header className={styles.tabs}>
         <button
           className={`${styles.tab} ${
@@ -147,23 +214,20 @@ export default function StudentDashboardPage() {
         </button>
       </header>
 
-      {/* 🔹概要タブ（支払い状況をすべて含む） */}
+      {/* 🔹 概要タブ */}
       {activeTab === "overview" && (
         <section className={styles.card}>
           <h1 className={styles.title}>支払い状況</h1>
-
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
             <span className={styles.percent}>{progress.toFixed(1)}%</span>
           </div>
-
           <div className={styles["progress-wrap"]}>
             <div
               className={styles["progress-bar"]}
               style={{ width: `${progress}%` }}
             />
           </div>
-
           <div className={styles.stats}>
             <article className={styles.stat}>
               <div className={styles["stat-label"]}>総学費</div>
@@ -183,32 +247,78 @@ export default function StudentDashboardPage() {
                 {remaining.toLocaleString()}円
               </div>
             </article>
-            <div className={styles.infoBox}>
-              {" "}
-              <div>Next payment deadline:</div>{" "}
-              <div className={styles.deadline}>
-                {" "}
-                {student?.deadline || "Not set"}{" "}
-              </div>{" "}
-            </div>
           </div>
         </section>
       )}
 
-      {/* 🔹履歴タブ */}
+      {/* 🔹 履歴タブ */}
       {activeTab === "history" && (
         <section className={styles.card}>
-          <h2>支払い履歴</h2>
-          <p>まだ支払い履歴はありません。</p>
-          <p>jslls</p>
+          <h2 className={styles.title}>支払い履歴</h2>
+
+          <table className={styles.paymentTable}>
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>時間</th>
+                <th>金額</th>
+                <th>状態</th>
+                <th>詳細</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p) => {
+                const date = p.createdAt?.toDate
+                  ? p.createdAt.toDate()
+                  : new Date();
+                //  日付と時間を日本語形式で表示
+                const formattedDate = date.toLocaleDateString("ja-JP");
+                const formattedTime = date.toLocaleTimeString("ja-JP", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                return (
+                  <tr key={p.id}>
+                    <td>{formattedDate}</td>
+                    <td>{formattedTime}</td>
+                    <td>¥{p.amount?.toLocaleString()}</td>
+                    <td>{p.paymentMethod || "-"}</td>
+                    <td>
+                      <span
+                        className={`${styles.status} ${
+                          p.status === "支払い済み"
+                            ? styles.paid
+                            : styles.unpaid
+                        }`}
+                      >
+                        {p.status}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setFile(e.target.files[0])}
+                      />{" "}
+                      <button
+                        onClick={handleReceiptUpload}
+                        disabled={uploading}
+                      >
+                        {" "}
+                        {uploading ? "アップロード中..." : "アップロード"}{" "}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </section>
       )}
 
-      {/* 🔹プロフィールタブ */}
+      {/* 🔹 プロフィールタブ */}
       {activeTab === "profile" && (
         <section className={styles.card}>
           <h2>プロフィール情報</h2>
-          <p>名前: {name}</p>
+          <p>名前: {student?.name || session.user.name}</p>
           <p>メール: {session.user.email}</p>
           <p>学籍番号: {student?.studentId || "未登録"}</p>
         </section>

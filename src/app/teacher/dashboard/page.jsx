@@ -1,188 +1,39 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import styles from "./page.module.css";
-export default function CoursesPage() {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newCourse, setNewCourse] = useState({ name: "", fee: "" });
+import { useSession } from "next-auth/react";
+import "./page.css";
 
-  useEffect(() => {
-    fetch("/api/admin/courses")
-      .then((r) => r.json())
-      .then((data) => setCourses(data))
-      .catch(() => setCourses([]))
-      .finally(() => setLoading(false));
-  }, []);
+export default function TeacherDashboard() {
+  const { data: session } = useSession();
+  const user = session?.user;
 
-  const refresh = async () => {
-    const r = await fetch("/api/admin/courses");
-    setCourses(await r.json());
-  };
+  const stats = [
+    { title: "コース名", value: "1,247", sub: "+12% from last month", color: "#4F9DDE" },
+    { title: "収益合計", value: "$2.4M", sub: "+8% from last month", color: "#57C785" },
+    { title: "アクティブコース", value: "24", sub: "2 new this semester", color: "#F0B84C" },
+    { title: "支払い率", value: "89%", sub: "+3% from last month", color: "#6C63FF" },
+  ];
 
-  const handleAddCourse = async () => {
-    if (!newCourse.name || !newCourse.fee)
-      return alert("Please fill all fields");
-    // convert fee like ¥900,000 or 900000 to number
-    const t = Number(String(newCourse.fee).replace(/[^0-9]/g, "")) || 0;
-    try {
-      const res = await fetch("/api/admin/courses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newCourse.name, tuition: t }),
-      });
-      if (res.ok) {
-        const created = await res.json();
-        // update local list
-        await refresh();
-        // Server API writes to Firestore; no client-side write here.
-      } else {
-        console.error("Failed to create course", res.status);
-      }
-    } catch (err) {
-      console.error("Error creating course:", err);
-    }
-    setNewCourse({ name: "", fee: "" });
-    document.querySelector(".add-modal").style.display = "none";
-  };
 
-  const handleDeleteCourse = async (code) => {
-    if (!confirm("Are you sure you want to delete this course?")) return;
-    await fetch("/api/admin/courses", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    await refresh();
-    // Server API deletes from Firestore; no client-side delete here.
-  };
-
-  const handleEditCourse = async (code, currentTuition) => {
-    const input = prompt(
-      "新しい学費を入力してください（数字のみ、例: 900000）",
-      String(currentTuition || "")
-    );
-    if (input === null) return; // cancelled
-    const t = Number(String(input).replace(/[^0-9]/g, ""));
-    if (Number.isNaN(t)) return alert("無効な金額です");
-    try {
-      const res = await fetch("/api/admin/courses", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, tuition: t }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        // update local list
-        await refresh();
-        // update Firestore using returned object
-        // Server API updated Firestore; no client-side write here.
-      } else {
-        console.error("Failed to update course", res.status);
-      }
-    } catch (err) {
-      console.error("Error updating course:", err);
-    }
-  };
-
-  const fmt = (n) =>
-    new Intl.NumberFormat("ja-JP", {
-      style: "currency",
-      currency: "JPY",
-    }).format(n);
-
-  if (loading) return <div>Loading...</div>;
 
   return (
-    <div className={styles["courses-page"]}>
-      <header className="courses-header">
-        <h2>Courses Management</h2>
-        <button
-          className={styles["add-btn"]}
-          onClick={() => {
-            const modal = document.querySelector(".add-modal");
-            modal.style.display = "flex";
-          }}
-        >
-          + New Course
-        </button>
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <h1>学費管理システム・{user?.isAdmin ? "管理者用" : "教師用"}</h1>
+        <span>ようこそ、{user?.name || "先生"} さん</span>
       </header>
 
-      <table className={styles["courses-table"]}>
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Course Name</th>
-            <th>Fee</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {courses.map((c) => (
-            <tr key={c.code}>
-              <td>{c.code}</td>
-              <td>{c.name}</td>
-              <td>{fmt(c.tuition)}</td>
-              <td>
-                <Link
-                  href={`/courses/${c.code}`}
-                  className={styles["view-btn"]}
-                >
-                  View
-                </Link>
-                <button
-                  className={styles["edit-btn"]}
-                  onClick={() => handleEditCourse(c.code, c.tuition)}
-                >
-                  Edit
-                </button>
-                <button
-                  className={styles["delete-btn"]}
-                  onClick={() => handleDeleteCourse(c.code)}
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Add New Course Modal */}
-      <div className="add-modal">
-        <div className={styles["modal-content"]}>
-          <h3>Add New Course</h3>
-          <input
-            type="text"
-            placeholder="Course Name"
-            value={newCourse.name}
-            onChange={(e) =>
-              setNewCourse({ ...newCourse, name: e.target.value })
-            }
-          />
-          <input
-            type="text"
-            placeholder="Fee (e.g. 900000 or ¥900,000)"
-            value={newCourse.fee}
-            onChange={(e) =>
-              setNewCourse({ ...newCourse, fee: e.target.value })
-            }
-          />
-          <div className="modal-actions">
-            <button onClick={handleAddCourse} className={styles["save-btn"]}>
-              Save
-            </button>
-            <button
-              onClick={() =>
-                (document.querySelector(".add-modal").style.display = "none")
-              }
-              className={styles["cancel-btn"]}
-            >
-              Cancel
-            </button>
+      {/* === Stats Cards === */}
+      <div className="stats-grid">
+        {stats.map((s, i) => (
+          <div key={i} className="stat-card" style={{ borderTop: `4px solid ${s.color}` }}>
+            <p className="stat-title">{s.title}</p>
+            <h2 className="stat-value">{s.value}</h2>
+            <p className="stat-sub">{s.sub}</p>
           </div>
-        </div>
+        ))}
       </div>
+
+  
     </div>
   );
 }

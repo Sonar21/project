@@ -1,6 +1,5 @@
-/* Copied from page.module.css to allow global import from the teacher page
-   If you prefer CSS Modules, import page.module.css and update the JSX to use
-   the `styles` object. For quick fix we provide this global CSS file. */
+
+
 .dashboard {
   font-family: "Segoe UI", sans-serif;
   background-color: #f8fafc;
