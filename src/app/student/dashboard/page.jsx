@@ -22,6 +22,7 @@ export default function StudentDashboardPage() {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [courseTuition, setCourseTuition] = useState(null);
+  const [computedTuition, setComputedTuition] = useState(null);
   const [activeTab, setActiveTab] = useState("overview"); // タブ状態
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -112,29 +113,62 @@ export default function StudentDashboardPage() {
   }, [status, session]);
 
   // 🔹 コースの学費をリアルタイム取得
+  //  学生IDの先頭文字でコース判定・次の2桁で入学年を判定し、
+  //  Firestore の courses ドキュメント内の tuitionByYear フィールドを優先して学年別学費を取得します。
   useEffect(() => {
     if (!student?.course) {
       setCourseTuition(null);
+      setComputedTuition(null);
       return;
     }
     const docRef = doc(db, "courses", String(student.course));
     const unsub = onSnapshot(
       docRef,
       (snap) => {
-        if (snap.exists()) {
-          const d = snap.data();
-          setCourseTuition(Number(d?.tuition) || 0);
-        } else {
+        if (!snap.exists()) {
           setCourseTuition(null);
+          setComputedTuition(null);
+          return;
         }
+        const d = snap.data() || {};
+        setCourseTuition(Number(d?.tuition) || 0);
+
+        // compute student year from studentId: e.g. w24002 -> cohort 24 -> cohortYear 2024
+        const sid = String(student.studentId || "");
+        let studentYear = 1;
+        if (sid.length >= 3) {
+          const cohortDigits = sid.slice(1, 3);
+          if (!Number.isNaN(Number(cohortDigits))) {
+            const cohortFull = 2000 + Number(cohortDigits);
+            const nowYear = new Date().getFullYear();
+            studentYear = nowYear - cohortFull + 1;
+            if (studentYear < 1) studentYear = 1;
+            if (studentYear > 10) studentYear = 10;
+          }
+        }
+
+        // Prefer tuitionByYear in Firestore (object with keys '1','2',... or 'default')
+        let t = null;
+        if (d?.tuitionByYear && typeof d.tuitionByYear === "object") {
+          const byYear = d.tuitionByYear;
+          if (byYear[String(studentYear)] !== undefined) {
+            t = Number(byYear[String(studentYear)]) || null;
+          } else if (byYear["default"] !== undefined) {
+            t = Number(byYear["default"]) || null;
+          }
+        }
+
+        if (t === null) t = Number(d?.tuition) || 0;
+        setComputedTuition(t);
       },
       (err) => {
         console.error("Course snapshot error:", err);
         setCourseTuition(null);
+        setComputedTuition(null);
       }
     );
     return () => unsub();
-  }, [student?.course]);
+  }, [student?.course, student?.studentId]);
 
   // 🔹 支払い履歴をリアルタイム取得
   useEffect(() => {
@@ -179,10 +213,25 @@ export default function StudentDashboardPage() {
   }
 
   // 🔹 支払い状況計算
-  const total = (courseTuition ?? student?.totalFees) || 0;
+  const total = (computedTuition ?? courseTuition ?? student?.totalFees) || 0;
   const paid = student?.paidAmount || 0;
   const remaining = total - paid;
   const progress = total ? Math.min((paid / total) * 100, 100) : 0;
+
+  // Compute student academic year for display (same logic as used for tuition calculation)
+  let displayStudentYear = null;
+  if (student?.studentId) {
+    const sid = String(student.studentId);
+    if (sid.length >= 3) {
+      const cohortDigits = sid.slice(1, 3);
+      if (!Number.isNaN(Number(cohortDigits))) {
+        const cohortFull = 2000 + Number(cohortDigits);
+        const nowYear = new Date().getFullYear();
+        displayStudentYear = nowYear - cohortFull + 1;
+        if (displayStudentYear < 1) displayStudentYear = 1;
+      }
+    }
+  }
 
   return (
     <main className={styles.container}>
@@ -218,6 +267,16 @@ export default function StudentDashboardPage() {
       {activeTab === "overview" && (
         <section className={styles.card}>
           <h1 className={styles.title}>支払い状況</h1>
+
+          <div className={styles.infoBox}>
+            <div>
+              コース: {student?.course || session.user.courseName || "未設定"}
+            </div>
+            <div>
+              学年: {displayStudentYear ? `${displayStudentYear}年` : "不明"} —
+              この学年の学費: {total.toLocaleString()}円
+            </div>
+          </div>
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
             <span className={styles.percent}>{progress.toFixed(1)}%</span>

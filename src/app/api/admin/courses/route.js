@@ -12,15 +12,19 @@ export async function GET() {
 
 export async function POST(req) {
   const body = await req.json();
-  const { name, tuition } = body;
+  const { name, tuition, tuitionByYear } = body;
   if (!name) return new Response("Missing name", { status: 400 });
   const created = addCourse(name, tuition || 0);
   try {
-    await adminDb.collection("courses").doc(created.code).set({
+    const writeObj = {
       name: created.name,
       tuition: created.tuition,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+    if (tuitionByYear && typeof tuitionByYear === "object") {
+      writeObj.tuitionByYear = tuitionByYear;
+    }
+    await adminDb.collection("courses").doc(created.code).set(writeObj);
   } catch (err) {
     console.error("Failed to write course to Firestore (server):", err);
   }
@@ -48,19 +52,23 @@ export async function DELETE(req) {
 export async function PUT(req) {
   try {
     const body = await req.json();
-    const { code, name, tuition } = body;
+    const { code, name, tuition, tuitionByYear } = body;
     if (!code) return new Response("Missing code", { status: 400 });
-    const updated = updateCourse(code, { name, tuition });
+    const updated = updateCourse(code, { name, tuition, tuitionByYear });
     if (!updated) return new Response("Not found", { status: 404 });
     try {
-      await adminDb.collection("courses").doc(String(updated.code)).set(
-        {
-          name: updated.name,
-          tuition: updated.tuition,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+      const writeObj = {
+        name: updated.name,
+        tuition: updated.tuition,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (tuitionByYear && typeof tuitionByYear === "object") {
+        writeObj.tuitionByYear = tuitionByYear;
+      } else if (updated.tuitionByYear !== undefined) {
+        // if updated object contains tuitionByYear (possibly null), persist it
+        writeObj.tuitionByYear = updated.tuitionByYear;
+      }
+      await adminDb.collection("courses").doc(String(updated.code)).set(writeObj, { merge: true });
     } catch (err) {
       console.error("Failed to update course in Firestore (server):", err);
     }

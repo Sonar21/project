@@ -1,8 +1,8 @@
 // Simple in-memory course -> tuition mapping for demo purposes
 const courses = new Map([
-  ["cs", { code: "cs", name: "Web Programming", tuition: 900000 }],
-  ["hm", { code: "hm", name: "Hotel Management", tuition: 750000 }],
-  ["dm", { code: "dm", name: "Digital Marketing", tuition: 680000 }],
+  ["cs", { code: "cs", name: "Web Programming", tuition: 900000, tuitionByYear: null }],
+  ["hm", { code: "hm", name: "Hotel Management", tuition: 750000, tuitionByYear: null }],
+  ["dm", { code: "dm", name: "Digital Marketing", tuition: 680000, tuitionByYear: null }],
 ]);
 
 function slugify(name) {
@@ -49,7 +49,7 @@ export function addCourse(name, tuition) {
     code = `${base}-${i++}`;
   }
   const t = Number(String(tuition).replace(/[^0-9]/g, "")) || 0;
-  const c = { code, name, tuition: t };
+  const c = { code, name, tuition: t, tuitionByYear: null };
   courses.set(code, c);
   return c;
 }
@@ -62,6 +62,10 @@ export function updateCourse(code, { name, tuition }) {
   if (tuition !== undefined)
     existing.tuition =
       Number(String(tuition).replace(/[^0-9]/g, "")) || existing.tuition;
+  // allow updating tuitionByYear object
+  if (arguments[1] && arguments[1].tuitionByYear !== undefined) {
+    existing.tuitionByYear = arguments[1].tuitionByYear || null;
+  }
   courses.set(key, existing);
   return existing;
 }

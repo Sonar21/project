@@ -1,16 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import "./page.css";
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState([
-    { id: 1, name: "Web Programming", fee: "¥800,000", students: 35 },
-    { id: 2, name: "Hotel Management", fee: "¥750,000", students: 28 },
-    { id: 3, name: "Digital Marketing", fee: "¥680,000", students: 22 },
-  ]);
+  const [courses, setCourses] = useState([]);
 
   const [newCourse, setNewCourse] = useState({ name: "", fee: "" });
+
+  useEffect(() => {
+    // load courses from server
+    fetch("/api/admin/courses")
+      .then((r) => r.json())
+      .then((data) => setCourses(data || []))
+      .catch(() => setCourses([]));
+  }, []);
 
   const handleAddCourse = () => {
     if (!newCourse.name || !newCourse.fee) return alert("Please fill all fields");
@@ -20,8 +24,63 @@ export default function CoursesPage() {
   };
 
   const handleDeleteCourse = (id) => {
-    if (confirm("Are you sure you want to delete this course?")) {
-      setCourses(courses.filter((c) => c.id !== id));
+    if (!confirm("Are you sure you want to delete this course?")) return;
+    fetch('/api/admin/courses', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: id }),
+    }).then(() => {
+      // refresh
+      fetch("/api/admin/courses").then((r) => r.json()).then((data) => setCourses(data || []));
+    });
+  };
+
+  const refresh = async () => {
+    const r = await fetch('/api/admin/courses');
+    setCourses(await r.json());
+  };
+
+  function parseTuitionByYearInput(input) {
+    // expected format: "1:50000,2:100000,default:90000"
+    if (!input || !input.trim()) return null;
+    const parts = input.split(",");
+    const obj = {};
+    for (const p of parts) {
+      const s = p.split(":");
+      if (s.length !== 2) continue;
+      const k = s[0].trim();
+      const v = Number(String(s[1]).replace(/[^0-9]/g, ""));
+      if (!Number.isNaN(v)) obj[k] = v;
+    }
+    return Object.keys(obj).length ? obj : null;
+  }
+
+  const handleEditYearFees = async (course) => {
+    const existing = course.tuitionByYear
+      ? Object.entries(course.tuitionByYear)
+          .map(([k, v]) => `${k}:${v}`)
+          .join(',')
+      : '';
+    const input = prompt(
+      `学年別学費を入力してください（例: 1:50000,2:100000,default:90000）`,
+      existing
+    );
+    if (input === null) return;
+    const parsed = parseTuitionByYearInput(input);
+    try {
+      const res = await fetch('/api/admin/courses', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: course.code || course.id, tuitionByYear: parsed }),
+      });
+      if (res.ok) {
+        await refresh();
+      } else {
+        alert('Failed to update tuitionByYear');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error updating tuitionByYear');
     }
   };
 
@@ -52,16 +111,28 @@ export default function CoursesPage() {
         </thead>
         <tbody>
           {courses.map((c) => (
-            <tr key={c.id}>
-              <td>{c.id}</td>
+            <tr key={c.code || c.id}>
+              <td>{c.code || c.id}</td>
               <td>{c.name}</td>
-              <td>{c.fee}</td>
-              <td>{c.students}</td>
               <td>
-                <Link href={`/courses/${c.id}`} className="view-btn">
+                {c.tuition
+                  ? new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(Number(c.tuition))
+                  : '-'}
+                {c.tuitionByYear ? (
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>
+                    学年別設定あり
+                  </div>
+                ) : null}
+              </td>
+              <td>{c.students || '-'}</td>
+              <td>
+                <Link href={`/courses/${c.code || c.id}`} className="view-btn">
                   View
                 </Link>
-                <button className="delete-btn" onClick={() => handleDeleteCourse(c.id)}>
+                <button className="edit-btn" onClick={() => handleEditYearFees(c)}>
+                  Edit Year Fees
+                </button>
+                <button className="delete-btn" onClick={() => handleDeleteCourse(c.code || c.id)}>
                   Delete
                 </button>
               </td>
