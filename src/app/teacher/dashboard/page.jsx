@@ -1,19 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
 import "./page.css";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
