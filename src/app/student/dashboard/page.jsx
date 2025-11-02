@@ -13,8 +13,13 @@ import {
   query,
   where,
   orderBy,
+  getDocs,
+  getDoc,
+  setDoc,
+  limit,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
 import styles from "./page.module.css";
 
 export default function StudentDashboardPage() {
@@ -22,6 +27,7 @@ export default function StudentDashboardPage() {
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [courseTuition, setCourseTuition] = useState(null);
+  const [courseInfo, setCourseInfo] = useState(null); // { id, pricePerMonth, createdAt, updatedAt, name }
   const [computedTuition, setComputedTuition] = useState(null);
   const [activeTab, setActiveTab] = useState("overview"); // タブ状態
   const [file, setFile] = useState(null);
@@ -54,14 +60,26 @@ export default function StudentDashboardPage() {
 
       // 3️⃣ Firestoreに支払い情報を追加
       const paymentsRef = collection(db, "payments");
-      await addDoc(paymentsRef, {
+      const paymentPayload = {
         studentId: student.studentId,
-        course: student.course || "未設定",
+        course: student.courseId || "未設定",
         receiptUrl: url,
         amount: numericAmount, // 入力金額
         paymentMethod: "銀行振込", // 支払い方法（例）
         status: "支払い済み", // 支払い状態
         createdAt: serverTimestamp(), // 支払った日時（自動）
+      };
+
+      const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
+
+      // 追加フィールド: paymentId, uploadedAt, verified, month
+      const monthValue =
+        student.startMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
+      await updateDoc(doc(db, "payments", paymentDocRef.id), {
+        paymentId: paymentDocRef.id,
+        uploadedAt: serverTimestamp(),
+        verified: false,
+        month: monthValue,
       });
 
       alert("支払い情報を保存しました！");
@@ -112,63 +130,90 @@ export default function StudentDashboardPage() {
     return () => unsub();
   }, [status, session]);
 
-  // 🔹 コースの学費をリアルタイム取得
-  //  学生IDの先頭文字でコース判定・次の2桁で入学年を判定し、
-  //  Firestore の courses ドキュメント内の tuitionByYear フィールドを優先して学年別学費を取得します。
+  // 🔹 Googleログイン後、自動で students に登録
   useEffect(() => {
-    if (!student?.course) {
-      setCourseTuition(null);
-      setComputedTuition(null);
-      return;
+    const registerStudentIfNeeded = async () => {
+      if (!session?.user?.email) return;
+
+      const email = session.user.email;
+      const studentId = email.split("@")[0]; // 例: w24001@school.jp → w24001
+      const courseId = studentId.startsWith("w") ? "web" : "unknown"; // 学籍番号の頭文字で判定
+
+      const studentRef = doc(db, "students", studentId);
+      const snap = await getDoc(studentRef);
+
+      if (!snap.exists()) {
+        await setDoc(studentRef, {
+          studentId,
+          email,
+          name: session.user.name || "未設定",
+          nameKana: "",
+          courseId,
+          startMonth: new Date().toISOString().slice(0, 7),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        console.log("✅ 新しい学生を登録しました:", studentId);
+      }
+    };
+
+    if (status === "authenticated") {
+      registerStudentIfNeeded();
     }
-    const docRef = doc(db, "courses", String(student.course));
-    const unsub = onSnapshot(
-      docRef,
-      (snap) => {
-        if (!snap.exists()) {
-          setCourseTuition(null);
+  }, [status, session]);
+
+  // 🔹 コース情報を取得
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!student?.courseId) {
+        setCourseInfo(null);
+        setComputedTuition(null);
+        return;
+      }
+
+      try {
+        // 1️⃣ courseId が "web" のような短縮文字列 → Firestore内の name フィールドと照合
+        const q = query(
+          collection(db, "courses"),
+          where("name", ">=", student.courseId),
+          where("name", "<=", student.courseId + "\uf8ff"),
+          limit(1)
+        );
+
+        const qsnap = await getDocs(q);
+
+        if (!qsnap.empty) {
+          const docSnap = qsnap.docs[0];
+          const d = docSnap.data();
+
+          // 2️⃣ 金額の取得優先順位
+          const totalFee =
+            Number(d.pricePerMonth) ||
+            Number(d.fee) ||
+            Number(d.tuition) ||
+            0;
+
+          // 3️⃣ コース情報を保存
+          setCourseInfo({
+            id: docSnap.id,
+            name: d.name || "未設定",
+            pricePerMonth: totalFee,
+          });
+          setComputedTuition(totalFee);
+        } else {
+          console.warn("コースが見つかりません:", student.courseId);
+          setCourseInfo(null);
           setComputedTuition(null);
-          return;
         }
-        const d = snap.data() || {};
-        setCourseTuition(Number(d?.tuition) || 0);
-
-        // compute student year from studentId: e.g. w24002 -> cohort 24 -> cohortYear 2024
-        const sid = String(student.studentId || "");
-        let studentYear = 1;
-        if (sid.length >= 3) {
-          const cohortDigits = sid.slice(1, 3);
-          if (!Number.isNaN(Number(cohortDigits))) {
-            const cohortFull = 2000 + Number(cohortDigits);
-            const nowYear = new Date().getFullYear();
-            studentYear = nowYear - cohortFull + 1;
-            if (studentYear < 1) studentYear = 1;
-            if (studentYear > 10) studentYear = 10;
-          }
-        }
-
-        // Prefer tuitionByYear in Firestore (object with keys '1','2',... or 'default')
-        let t = null;
-        if (d?.tuitionByYear && typeof d.tuitionByYear === "object") {
-          const byYear = d.tuitionByYear;
-          if (byYear[String(studentYear)] !== undefined) {
-            t = Number(byYear[String(studentYear)]) || null;
-          } else if (byYear["default"] !== undefined) {
-            t = Number(byYear["default"]) || null;
-          }
-        }
-
-        if (t === null) t = Number(d?.tuition) || 0;
-        setComputedTuition(t);
-      },
-      (err) => {
-        console.error("Course snapshot error:", err);
-        setCourseTuition(null);
+      } catch (err) {
+        console.error("コース取得エラー:", err);
+        setCourseInfo(null);
         setComputedTuition(null);
       }
-    );
-    return () => unsub();
-  }, [student?.course, student?.studentId]);
+    };
+
+    fetchCourse();
+  }, [student?.courseId]);
 
   // 🔹 支払い履歴をリアルタイム取得
   useEffect(() => {
@@ -181,13 +226,60 @@ export default function StudentDashboardPage() {
       orderBy("createdAt", "desc")
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setPayments(data);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPayments(data);
+      },
+      (err) => {
+        console.error("Payments snapshot error:", err);
+        // Firestore may require a composite index when combining where() and orderBy() on different fields.
+        // The error.message usually includes a direct URL to create the index in Firebase Console — log it so developers can click it.
+        if (err && err.message) {
+          console.warn("Firestore index required or query failed:", err.message);
+        }
+      }
+    );
+
+    return () => unsub();
+  }, [student?.studentId]);
+
+
+  // (旧来の詳細フェッチは廃止) 単一の fetchCourse useEffect を使っているため、ここは削除しました。
+
+  // 🔹 支払い履歴をリアルタイム取得
+  useEffect(() => {
+    if (!student?.studentId) return;
+
+    const paymentsRef = collection(db, "payments");
+    const q = query(
+      paymentsRef,
+      where("studentId", "==", student.studentId),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPayments(data);
+      },
+      (err) => {
+        console.error("Payments snapshot error:", err);
+        // Firestore may require a composite index when combining where() and orderBy() on different fields.
+        // The error.message usually includes a direct URL to create the index in Firebase Console — log it so developers can click it.
+        if (err && err.message) {
+          console.warn("Firestore index required or query failed:", err.message);
+        }
+      }
+    );
 
     return () => unsub();
   }, [student?.studentId]);
@@ -213,9 +305,23 @@ export default function StudentDashboardPage() {
   }
 
   // 🔹 支払い状況計算
-  const total = (computedTuition ?? courseTuition ?? student?.totalFees) || 0;
-  const paid = student?.paidAmount || 0;
-  const remaining = total - paid;
+  // total: prefer courseInfo.pricePerMonth, then computedTuition, courseTuition, student.totalFees
+  const total = Number(
+    courseInfo?.pricePerMonth ??
+      computedTuition ??
+      courseTuition ??
+      student?.totalFees ??
+      0
+  );
+
+  // paid: sum of payments amounts from Firestore (real-time)
+  const paidFromPayments = payments.reduce(
+    (sum, p) => sum + (Number(p.amount) || 0),
+    0
+  );
+  const paid = paidFromPayments || Number(student?.paidAmount || 0);
+
+  const remaining = Math.max(total - paid, 0);
   const progress = total ? Math.min((paid / total) * 100, 100) : 0;
 
   // Compute student academic year for display (same logic as used for tuition calculation)
@@ -270,11 +376,11 @@ export default function StudentDashboardPage() {
 
           <div className={styles.infoBox}>
             <div>
-              コース: {student?.course || session.user.courseName || "未設定"}
-            </div>
-            <div>
-              学年: {displayStudentYear ? `${displayStudentYear}年` : "不明"} —
-              この学年の学費: {total.toLocaleString()}円
+              コース:{" "}
+              {courseInfo?.name ??
+                student?.courseId ??
+                session.user.courseName ??
+                "未設定"}
             </div>
           </div>
           <div className={styles["progress-row"]}>

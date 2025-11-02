@@ -81,6 +81,7 @@ export function listUsers() {
     studentId: u.studentId,
     name: u.name,
     email: u.email,
+    courseId: u.courseId || "",
     role: u.role,
   }));
 }
@@ -96,6 +97,28 @@ export function updateUserRole(studentId, newRole) {
     studentId: u.studentId,
     name: u.name,
     email: u.email,
+    role: u.role,
+  };
+}
+
+// Update arbitrary user fields (used by admin API)
+export function updateUser(studentId, updates = {}) {
+  const key = String(studentId).toLowerCase();
+  const u = users.get(key);
+  if (!u) return null;
+  // Acceptable updates: courseId (or legacy course), name, email, role
+  if (updates.courseId !== undefined) u.courseId = updates.courseId;
+  else if (updates.course !== undefined) u.courseId = updates.course;
+  if (updates.name !== undefined) u.name = updates.name;
+  if (updates.email !== undefined) u.email = updates.email;
+  if (updates.role !== undefined) u.role = updates.role;
+  users.set(key, u);
+  return {
+    id: u.id,
+    studentId: u.studentId,
+    name: u.name,
+    email: u.email,
+    courseId: u.courseId || "",
     role: u.role,
   };
 }

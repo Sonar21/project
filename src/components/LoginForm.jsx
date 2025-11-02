@@ -7,6 +7,7 @@ import Link from "next/link";
 import styles from "./LoginForm.module.css";
 import Image from "next/image";
 
+
 const LoginForm = () => {
     return (
         <form action={doSocialLogin}>
@@ -150,4 +151,3 @@ const SignInPage = () => {
 };
 
 export default SignInPage;
-

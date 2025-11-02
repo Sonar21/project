@@ -74,7 +74,7 @@
 
 /* Modal */
 .add-modal {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -132,4 +132,23 @@
 .course-link:hover {
   text-decoration: underline;
   color: #3d7fc0;
+}
+.filter-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.filter-tabs button {
+  background: #f4f4f4;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.filter-tabs button.active {
+  background: #007bff;
+  color: white;
 }

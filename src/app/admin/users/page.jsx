@@ -34,7 +34,8 @@ export default function AdminUsersPage() {
     await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId, course }),
+      // send as courseId to align with backend/Firestore
+      body: JSON.stringify({ studentId, courseId: course }),
     });
     const res = await fetch("/api/admin/users");
     setUsers(await res.json());
@@ -51,7 +52,7 @@ export default function AdminUsersPage() {
             <th>studentId</th>
             <th>name</th>
             <th>role</th>
-            <th>course</th>
+                <th>course</th>
             <th>action</th>
           </tr>
         </thead>
@@ -61,9 +62,9 @@ export default function AdminUsersPage() {
               <td>{u.studentId}</td>
               <td>{u.name}</td>
               <td>{u.role}</td>
-              <td>
+                <td>
                 <select
-                  value={u.course || ""}
+                  value={u.courseId || ""}
                   onChange={(e) => changeCourse(u.studentId, e.target.value)}
                 >
                   <option value="">-- none --</option>

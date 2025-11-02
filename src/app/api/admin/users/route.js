@@ -12,11 +12,11 @@ export async function POST(req) {
   if (role) {
     updated = updateUserRole(studentId, role);
   }
-  // allow updating course, name or email via updateUser
-  if (body.course || body.name || body.email) {
-    // update in-memory user
+  // allow updating courseId (or legacy course), name or email via updateUser
+  if (body.courseId || body.course || body.name || body.email) {
+    // update in-memory user (prefer courseId)
     updated = updateUser(studentId, {
-      course: body.course,
+      courseId: body.courseId ?? body.course,
       name: body.name,
       email: body.email,
     });
@@ -25,7 +25,8 @@ export async function POST(req) {
       const writeData = {
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
-      if (body.course) writeData.course = body.course;
+      if (body.courseId || body.course)
+        writeData.courseId = body.courseId ?? body.course;
       if (body.name) writeData.name = body.name;
       if (body.email) writeData.email = body.email;
       await adminDb
