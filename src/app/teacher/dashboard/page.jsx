@@ -1,6 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import "./page.css";
+import AddCourseForm from "@/components/AddCourseForm";
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
@@ -33,7 +34,12 @@ export default function TeacherDashboard() {
         ))}
       </div>
 
-  
+      {/* === Course creation form for teachers === */}
+      <section style={{ marginTop: 24 }}>
+        <h3 style={{ marginBottom: 8 }}>新しいコースを追加</h3>
+        <AddCourseForm />
+      </section>
+
     </div>
   );
 }

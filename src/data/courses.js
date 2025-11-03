@@ -1,9 +1,9 @@
 // Simple in-memory course -> tuition mapping for demo purposes
-const courses = new Map([
-  ["cs", { code: "cs", name: "Web Programming", tuition: 900000, tuitionByYear: null }],
-  ["hm", { code: "hm", name: "Hotel Management", tuition: 750000, tuitionByYear: null }],
-  ["dm", { code: "dm", name: "Digital Marketing", tuition: 680000, tuitionByYear: null }],
-]);
+// const courses = new Map([
+//   ["cs", { code: "cs", name: "Web Programming", tuition: 900000, tuitionByYear: null }],
+//   ["hm", { code: "hm", name: "Hotel Management", tuition: 750000, tuitionByYear: null }],
+//   ["dm", { code: "dm", name: "Digital Marketing", tuition: 680000, tuitionByYear: null }],
+// ]);
 
 function slugify(name) {
   return String(name)

@@ -62,7 +62,8 @@ export function determineRoleByEmail(email) {
   const parts = String(email).toLowerCase().split('@');
   if (parts.length !== 2) return 'student';
   const [local, domain] = parts;
-  if (!domain.endsWith('osfl.ac.jp')) return 'student';
+  // Allow both osfl.ac.jp and std.it-college.ac.jp domains
+  if (!(domain.endsWith('osfl.ac.jp') || domain.endsWith('std.it-college.ac.jp'))) return 'student';
 
   // Student pattern: starts with W or K followed by digits, e.g. W24002 or K12345
   if (/^[wk]\d{1,}$/i.test(local)) return 'student';

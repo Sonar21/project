@@ -17,6 +17,8 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState([]);
   const [newCourse, setNewCourse] = useState({
     name: "",
+    nameJa: "",
+    nameEn: "",
     fee: "",
     year: "1st Year",
   });
@@ -47,8 +49,18 @@ export default function CoursesPage() {
       String(newCourse.fee).replace(/[^0-9.-]+/g, "") || 0
     );
 
+    // generate a courseKey slug from name
+    const generatedKey = String(newCourse.name || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
     const payload = {
-      name: newCourse.name,
+      name: newCourse.name || newCourse.nameJa || newCourse.nameEn,
+      nameJa: newCourse.nameJa || null,
+      nameEn: newCourse.nameEn || null,
+      courseKey: generatedKey,
       fee: newCourse.fee,
       pricePerMonth: parsedPrice,
       year: newCourse.year,
@@ -61,7 +73,7 @@ export default function CoursesPage() {
       const coursesRef = collection(db, "courses");
       const docRef = await addDoc(coursesRef, payload);
 
-      // Firestore内でcourseIdをセット
+      // 保守のためドキュメントIDも記録しておく（legacy）
       await updateDoc(doc(db, "courses", docRef.id), {
         courseId: docRef.id,
         updatedAt: serverTimestamp(),
@@ -141,13 +153,17 @@ export default function CoursesPage() {
           {filteredCourses.map((c, index) => (
             <tr key={c.id}>
               <td>{index + 1}</td>
-              <td>{c.name}</td>
+              <td>
+                {c.nameJa && c.nameEn
+                  ? `${c.nameJa} / ${c.nameEn}`
+                  : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
+              </td>
               <td>{c.fee}</td>
               <td>{c.students ?? 0}</td>
               <td>{c.year}</td>
               <td>
                 <Link
-                  href={`/teacher/dashboard/course/${c.id}`}
+                  href={`/teacher/dashboard/course/${c.courseKey ?? c.id}`}
                   className="view-btn"
                 >
                   View
@@ -158,6 +174,12 @@ export default function CoursesPage() {
                 >
                   Delete
                 </button>
+                {/* <button
+                  className="edit-btn"
+                  onClick={() => handleEditCourse(c.id)}
+                >
+                  Edit
+                </button> */}
               </td>
             </tr>
           ))}
@@ -171,12 +193,28 @@ export default function CoursesPage() {
             <h3>Add New Course</h3>
             <input
               type="text"
-              placeholder="Course Name"
+              placeholder="Course Name (display fallback)"
               value={newCourse.name}
               onChange={(e) =>
                 setNewCourse({ ...newCourse, name: e.target.value })
               }
             />
+            {/* <input
+              type="text"
+              placeholder="Course Name (日本語、任意)"
+              value={newCourse.nameJa}
+              onChange={(e) =>
+                setNewCourse({ ...newCourse, nameJa: e.target.value })
+              }
+            /> */}
+            {/* <input
+              type="text"
+              placeholder="Course Name (English, optional)"
+              value={newCourse.nameEn}
+              onChange={(e) =>
+                setNewCourse({ ...newCourse, nameEn: e.target.value })
+              }
+            /> */}
             <input
               type="text"
               placeholder="Fee (e.g. ¥900,000)"

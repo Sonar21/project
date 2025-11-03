@@ -13,10 +13,11 @@ import {
   query,
   where,
   orderBy,
+  limit,
   getDocs,
   getDoc,
   setDoc,
-  limit,
+  increment,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -132,29 +133,110 @@ export default function StudentDashboardPage() {
 
   // 🔹 Googleログイン後、自動で students に登録
   useEffect(() => {
-    const registerStudentIfNeeded = async () => {
-      if (!session?.user?.email) return;
+    // courseKey を判定して返すユーティリティ
+    const determineCourseKey = async (studentId, email) => {
+      const id = String(studentId || "").toLowerCase();
+      const mail = String(email || "").toLowerCase();
+      let key = "unknown";
 
-      const email = session.user.email;
-      const studentId = email.split("@")[0]; // 例: w24001@school.jp → w24001
-      const courseId = studentId.startsWith("w") ? "web" : "unknown"; // 学籍番号の頭文字で判定
+      if (id.startsWith("jf")) key = "global";
+      else if (id.startsWith("w")) key = "web";
+      else if (id.startsWith("j")) key = "japanese";
+      else if (id.startsWith("i")) key = "it";
+      else if (id.startsWith("f")) key = "global";
+      else if (id.startsWith("k")) key = "tourism";//add course
+      else if (mail.endsWith("@newcourse.ac.jp")) key = "newcourse";
+      else if (mail.endsWith("@std.it-college.ac.jp")) {
+        if (id.startsWith("jf")) key = "global";
+        else if (id.startsWith("j")) key = "japanese";
+        else if (id.startsWith("i")) key = "it";
+        else if (id.startsWith("k")) key = "tourism";//add course 
+      }
+
+      // Firestore に存在するか確認
+      if (key !== "unknown") {
+        const q = query(
+          collection(db, "courses"),
+          where("courseKey", "==", key),
+          limit(1)
+        );
+        const qsnap = await getDocs(q);
+        if (!qsnap.empty) return key;
+
+        // フォールバック: courseKey プレフィックス検索
+        const q2 = query(
+          collection(db, "courses"),
+          where("courseKey", ">=", key),
+          where("courseKey", "<=", key + "\uf8ff"),
+          limit(1)
+        );
+        const qsnap2 = await getDocs(q2);
+        if (!qsnap2.empty) return qsnap2.docs[0].data().courseKey || key;
+      }
+
+      return "unknown";
+    };
+
+    // Save student and automatically determine + set courseId (courseKey).
+    // This helper will try heuristics first, then fall back to scanning available
+    // courses if needed so new courses don't require manual changes.
+    const saveStudentWithAutoCourse = async (studentId, email, extra = {}) => {
+      const courseKey = await determineCourseKey(studentId, email);
 
       const studentRef = doc(db, "students", studentId);
       const snap = await getDoc(studentRef);
 
       if (!snap.exists()) {
-        await setDoc(studentRef, {
+        // merge payload with any extra fields passed in
+        const payload = {
           studentId,
           email,
-          name: session.user.name || "未設定",
+          name: session.user?.name || "未設定",
           nameKana: "",
-          courseId,
+          courseId: courseKey, // students stores courseKey now
           startMonth: new Date().toISOString().slice(0, 7),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-        });
-        console.log("✅ 新しい学生を登録しました:", studentId);
+          ...extra,
+        };
+
+        await setDoc(studentRef, payload);
+
+        // If we resolved a real courseKey, try to increment that course's students count
+        if (courseKey && courseKey !== "unknown") {
+          try {
+            const q = query(
+              collection(db, "courses"),
+              where("courseKey", "==", courseKey),
+              limit(1)
+            );
+            const qsnap = await getDocs(q);
+            if (!qsnap.empty) {
+              const courseDocId = qsnap.docs[0].id;
+              await updateDoc(doc(db, "courses", courseDocId), {
+                students: increment(1),
+                updatedAt: serverTimestamp(),
+              });
+            }
+          } catch (err) {
+            console.warn("Failed to increment students for course:", err);
+          }
+        }
+
+        console.log(
+          "✅ 新しい学生を登録しました:",
+          studentId,
+          "courseKey:",
+          courseKey
+        );
       }
+    };
+
+    const registerStudentIfNeeded = async () => {
+      if (!session?.user?.email) return;
+      const email = session.user.email;
+      const studentId = email.split("@")[0];
+      await saveStudentWithAutoCourse(studentId, email);
     };
 
     if (status === "authenticated") {
@@ -175,8 +257,8 @@ export default function StudentDashboardPage() {
         // 1️⃣ courseId が "web" のような短縮文字列 → Firestore内の name フィールドと照合
         const q = query(
           collection(db, "courses"),
-          where("name", ">=", student.courseId),
-          where("name", "<=", student.courseId + "\uf8ff"),
+          where("courseKey", "==", student.courseId),
+          // where("courseKey", "<=", student.courseId + "\uf8ff"),
           limit(1)
         );
 
@@ -188,10 +270,7 @@ export default function StudentDashboardPage() {
 
           // 2️⃣ 金額の取得優先順位
           const totalFee =
-            Number(d.pricePerMonth) ||
-            Number(d.fee) ||
-            Number(d.tuition) ||
-            0;
+            Number(d.pricePerMonth) || Number(d.fee) || Number(d.tuition) || 0;
 
           // 3️⃣ コース情報を保存
           setCourseInfo({
@@ -240,14 +319,16 @@ export default function StudentDashboardPage() {
         // Firestore may require a composite index when combining where() and orderBy() on different fields.
         // The error.message usually includes a direct URL to create the index in Firebase Console — log it so developers can click it.
         if (err && err.message) {
-          console.warn("Firestore index required or query failed:", err.message);
+          console.warn(
+            "Firestore index required or query failed:",
+            err.message
+          );
         }
       }
     );
 
     return () => unsub();
   }, [student?.studentId]);
-
 
   // (旧来の詳細フェッチは廃止) 単一の fetchCourse useEffect を使っているため、ここは削除しました。
 
@@ -276,7 +357,10 @@ export default function StudentDashboardPage() {
         // Firestore may require a composite index when combining where() and orderBy() on different fields.
         // The error.message usually includes a direct URL to create the index in Firebase Console — log it so developers can click it.
         if (err && err.message) {
-          console.warn("Firestore index required or query failed:", err.message);
+          console.warn(
+            "Firestore index required or query failed:",
+            err.message
+          );
         }
       }
     );
