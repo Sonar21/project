@@ -134,47 +134,35 @@ export default function StudentDashboardPage() {
   // 🔹 Googleログイン後、自動で students に登録
   useEffect(() => {
     // courseKey を判定して返すユーティリティ
+    // シンプルなプレフィックス判定: 最初の文字に基づき courseId を返す
+    // 要件:
+    // - studentId が "j" で始まる → "japanese"
+    // - studentId が "k" で始まる → "tourism-japanese"
+    // - studentId が "i" で始まる → "it"
+    // - studentId が "w" で始まる → "web"
+    // - 上記に該当しない場合 → "unknown"
     const determineCourseKey = async (studentId, email) => {
-      const id = String(studentId || "").toLowerCase();
-      const mail = String(email || "").toLowerCase();
-      let key = "unknown";
+      const id = String(studentId || "")
+        .toLowerCase()
+        .trim();
 
-      if (id.startsWith("jf")) key = "global";
-      else if (id.startsWith("w")) key = "web";
-      else if (id.startsWith("j")) key = "japanese";
-      else if (id.startsWith("i")) key = "it";
-      else if (id.startsWith("f")) key = "global";
-      else if (id.startsWith("k")) key = "tourism";//add course
-      else if (mail.endsWith("@newcourse.ac.jp")) key = "newcourse";
-      else if (mail.endsWith("@std.it-college.ac.jp")) {
-        if (id.startsWith("jf")) key = "global";
-        else if (id.startsWith("j")) key = "japanese";
-        else if (id.startsWith("i")) key = "it";
-        else if (id.startsWith("k")) key = "tourism";//add course 
+      if (!id) return "unknown";
+
+      const first = id.charAt(0);
+      switch (first) {
+        case "j":
+          return "japanese";
+        case "k":
+          return "kokusai";
+        case "i":
+          return "it";
+        case "w":
+          return "web";
+        case "f":
+          return "global";
+        default:
+          return "unknown";
       }
-
-      // Firestore に存在するか確認
-      if (key !== "unknown") {
-        const q = query(
-          collection(db, "courses"),
-          where("courseKey", "==", key),
-          limit(1)
-        );
-        const qsnap = await getDocs(q);
-        if (!qsnap.empty) return key;
-
-        // フォールバック: courseKey プレフィックス検索
-        const q2 = query(
-          collection(db, "courses"),
-          where("courseKey", ">=", key),
-          where("courseKey", "<=", key + "\uf8ff"),
-          limit(1)
-        );
-        const qsnap2 = await getDocs(q2);
-        if (!qsnap2.empty) return qsnap2.docs[0].data().courseKey || key;
-      }
-
-      return "unknown";
     };
 
     // Save student and automatically determine + set courseId (courseKey).
@@ -245,6 +233,12 @@ export default function StudentDashboardPage() {
   }, [status, session]);
 
   // 🔹 コース情報を取得
+  // Combine courseId and totalFees into a single stable dependency so the
+  // dependency array length never changes between renders (avoids HMR warning).
+  const _courseKeyAndFees = `${student?.courseId ?? ""}::${String(
+    student?.totalFees ?? ""
+  )}`;
+
   useEffect(() => {
     const fetchCourse = async () => {
       if (!student?.courseId) {
@@ -280,9 +274,90 @@ export default function StudentDashboardPage() {
           });
           setComputedTuition(totalFee);
         } else {
-          console.warn("コースが見つかりません:", student.courseId);
-          setCourseInfo(null);
-          setComputedTuition(null);
+          // フォールバック検索: courseKey のプレフィックスやコース名で探す
+          let found = false;
+
+          // まず courseKey の範囲検索
+          try {
+            const q2 = query(
+              collection(db, "courses"),
+              where("courseKey", ">=", student.courseId),
+              where("courseKey", "<=", student.courseId + "\uf8ff"),
+              limit(1)
+            );
+            const qsnap2 = await getDocs(q2);
+            if (!qsnap2.empty) {
+              const docSnap = qsnap2.docs[0];
+              const d = docSnap.data();
+              const totalFee =
+                Number(d.pricePerMonth) ||
+                Number(d.fee) ||
+                Number(d.tuition) ||
+                0;
+              setCourseInfo({
+                id: docSnap.id,
+                name: d.name || "未設定",
+                pricePerMonth: totalFee,
+              });
+              setComputedTuition(totalFee);
+              found = true;
+            }
+          } catch (err) {
+            console.warn("courseKey プレフィックス検索でエラー:", err);
+          }
+
+          // 次にコース名の候補で検索（簡易マッピング）
+          if (!found) {
+            const nameMap = {
+              japanese: ["日本語ビジネスコース", "日本語科", "日本語コース"],
+              "tourism-japanese": [
+                "観光日本語コース",
+                "観光コース",
+                "観光日本語",
+              ],
+              web: ["WEBプログラミング", "ウェブプログラミング"],
+              it: ["ITコース", "情報技術コース"],
+            };
+
+            const candidates = nameMap[student.courseId] || [];
+            for (const name of candidates) {
+              try {
+                const q3 = query(
+                  collection(db, "courses"),
+                  where("name", "==", name),
+                  limit(1)
+                );
+                const snap3 = await getDocs(q3);
+                if (!snap3.empty) {
+                  const docSnap = snap3.docs[0];
+                  const d = docSnap.data();
+                  const totalFee =
+                    Number(d.pricePerMonth) ||
+                    Number(d.fee) ||
+                    Number(d.tuition) ||
+                    0;
+                  setCourseInfo({
+                    id: docSnap.id,
+                    name: d.name || "未設定",
+                    pricePerMonth: totalFee,
+                  });
+                  setComputedTuition(totalFee);
+                  found = true;
+                  break;
+                }
+              } catch (err) {
+                console.warn("コース名検索でエラー:", err);
+              }
+            }
+          }
+
+          if (!found) {
+            console.warn("コースが見つかりません:", student.courseId);
+            // 最後のフォールバック: students ドキュメントに既に totalFees があればそれを使う
+            const fallback = Number(student?.totalFees) || 0;
+            setCourseInfo(null);
+            setComputedTuition(fallback || null);
+          }
         }
       } catch (err) {
         console.error("コース取得エラー:", err);
@@ -292,7 +367,7 @@ export default function StudentDashboardPage() {
     };
 
     fetchCourse();
-  }, [student?.courseId]);
+  }, [_courseKeyAndFees, student?.courseId, student?.totalFees]);
 
   // 🔹 支払い履歴をリアルタイム取得
   useEffect(() => {
