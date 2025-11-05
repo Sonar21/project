@@ -1,11 +1,24 @@
 import adminApp, { adminDb } from "../src/firebase/adminApp.js";
 
 async function slugify(name) {
-  return String(name || "")
+  const s = String(name || "").trim();
+  // Prefer ASCII words if present (e.g. "Web プログラミング" -> "web")
+  const asciiMatch = s.match(/[A-Za-z0-9]+/g);
+  if (asciiMatch && asciiMatch.length > 0) {
+    // Join multiple ASCII words with '-' so multi-word names keep readable slugs
+    return String(asciiMatch.join("-")).toLowerCase().slice(0, 40);
+  }
+
+  const slug = s
     .toLowerCase()
-    .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+
+  if (slug) return slug;
+
+  // Fallback to a timestamp-based key to avoid empty courseKey values
+  return `course-${Date.now().toString(36)}`.slice(0, 40);
 }
 
 async function main() {

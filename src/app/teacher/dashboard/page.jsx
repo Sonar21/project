@@ -2,16 +2,52 @@
 import { useSession } from "next-auth/react";
 import "./page.css";
 import AddCourseForm from "@/components/AddCourseForm";
+import Link from "next/link";
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
   const user = session?.user;
 
   const stats = [
-    { title: "コース名", value: "1,247", sub: "+12% from last month", color: "#4F9DDE" },
-    { title: "収益合計", value: "$2.4M", sub: "+8% from last month", color: "#57C785" },
-    { title: "アクティブコース", value: "24", sub: "2 new this semester", color: "#F0B84C" },
-    { title: "支払い率", value: "89%", sub: "+3% from last month", color: "#6C63FF" },
+   
+    {
+    title: (
+      <Link href="/teacher/dashboard/course" className="link-title">
+        コース名
+      </Link>
+    ),
+   
+  },
+    {
+      title: (
+        <Link href="/teacher/dashboard/revenue" className="link-title">
+          収益合計
+        </Link>
+      ),
+      value: "$2.4M",
+      sub: "+8% from last month",
+      color: "#57C785",
+    },
+    {
+      title: (
+        <Link href="/teacher/dashboard/courses" className="link-title">
+          アクティブコース
+        </Link>
+      ),
+      value: "24",
+      sub: "2 new this semester",
+      color: "#F0B84C",
+    },
+    {
+      title: (
+        <Link href="/teacher/dashboard/payments" className="link-title">
+          支払い率
+        </Link>
+      ),
+      value: "89%",
+      sub: "+3% from last month",
+      color: "#6C63FF",
+    },
   ];
 
 

@@ -6,11 +6,27 @@
 // ]);
 
 function slugify(name) {
-  return String(name)
+  const s = String(name || "").trim();
+  // Prefer ASCII words if present (e.g. "Web プログラミング" -> "web")
+  const asciiMatch = s.match(/[A-Za-z0-9]+/g);
+  if (asciiMatch && asciiMatch.length > 0) {
+    // Join multiple ASCII words with '-' so multi-word names keep readable slugs
+    return String(asciiMatch.join("-")).toLowerCase().slice(0, 40);
+  }
+
+  // Fallback: create a conservative slug by replacing non-alphanum with '-' and
+  // trimming extra hyphens. This will often become empty for non-latin names,
+  // so ensure we never return an empty string by falling back to a timestamp.
+  const slug = s
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .slice(0, 40);
+
+  if (slug) return slug;
+
+  // Last-resort fallback: deterministic-ish unique key based on timestamp.
+  return `course-${Date.now().toString(36)}`.slice(0, 40);
 }
 
 export function listCourses() {

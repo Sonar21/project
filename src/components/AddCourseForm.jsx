@@ -8,6 +8,9 @@ import {
   serverTimestamp,
   setDoc,
   doc,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 
 export default function AddCourseForm() {
@@ -53,28 +56,65 @@ export default function AddCourseForm() {
     setSaving(true);
 
     try {
+      // generate courseKey when not provided by user
+      const slugify = (s) =>
+        String(s || "")
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+          .slice(0, 40);
+
+      let finalCourseKey = courseKey.trim();
+      if (!finalCourseKey) {
+        const sourceName =
+          name.trim() || nameJa.trim() || nameEn.trim() || "course";
+        const base = slugify(sourceName);
+        let candidate = base || `course-${Date.now()}`;
+        // ensure uniqueness in Firestore by querying existing courseKey
+        let suffix = 1;
+        while (true) {
+          const q = query(
+            collection(db, "courses"),
+            where("courseKey", "==", candidate)
+          );
+          // eslint-disable-next-line no-await-in-loop
+          const snap = await getDocs(q);
+          if (snap.empty) break;
+          candidate = `${base}-${suffix++}`;
+          // safety: if suffix grows too large, append timestamp
+          if (suffix > 50) {
+            candidate = `${base}-${Date.now()}`;
+            break;
+          }
+        }
+        finalCourseKey = candidate;
+      }
+
       const payload = {
         // name: fallback display name
         name: name.trim() || nameJa.trim() || nameEn.trim(),
         nameJa: nameJa.trim() || null,
         nameEn: nameEn.trim() || null,
-        courseKey: courseKey.trim(),
+        courseKey: finalCourseKey,
         pricePerMonth: numeric,
         fee: String(numeric),
-        year: year || "",
+        year: year, //増加しました
         students: 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
-      if (useKeyAsId && courseKey.trim()) {
-        // use courseKey as document ID (idempotent: will overwrite existing)
-        const keyId = courseKey.trim();
+      if (useKeyAsId) {
+        // use finalCourseKey as document ID (idempotent: will overwrite existing)
+        const keyId = finalCourseKey;
         await setDoc(doc(db, "courses", keyId), payload);
         setMessage(`コースを作成しました（ID = courseKey）: ${keyId}`);
       } else {
         const ref = await addDoc(collection(db, "courses"), payload);
-        setMessage(`コースを作成しました。ID: ${ref.id}`);
+        setMessage(
+          `コースを作成しました。ID: ${ref.id} (courseKey=${finalCourseKey})`
+        );
       }
 
       clearForm();
@@ -155,14 +195,20 @@ export default function AddCourseForm() {
 
       <div style={{ marginBottom: 8 }}>
         <label>
-          Year
-          <input
+          学年 (year)
+          <select
             type="text"
             value={year}
             onChange={(e) => setYear(e.target.value)}
-            placeholder="例: 2nd Year"
+            placeholder="例: 2年生"
             style={{ width: "100%" }}
-          />
+          >
+            <option value="">選択してください</option>
+            <option value="1年生">1年生</option>
+            <option value="2年生">2年生</option>
+            <option value="3年生">3年生</option>
+            <option value="4年生">4年生</option>
+          </select>
         </label>
       </div>
 
