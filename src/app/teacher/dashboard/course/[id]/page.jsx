@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/firebase/clientApp"; // ← あなたのFirebase設定
 import "./detail.css";
+import Link from "next/link";
 
 export default function CourseDetailPage() {
   const { id } = useParams(); // 例: "web"
@@ -69,8 +70,23 @@ export default function CourseDetailPage() {
           ) : (
             filteredStudents.map((s) => (
               <tr key={s.id}>
-                <td>{s.studentId}</td>
-                <td>{s.name}</td>
+                <td>
+    <Link
+      href={`/student/dashboard`} // or student.studentNumber
+      className="text-blue-600 hover:underline"
+    >
+      {s.studentId}
+    </Link>
+  </td>
+
+                 <td>
+    <Link
+      href={`/student/dashboard`} // or student.studentNumber
+      className="text-blue-600 hover:underline"
+    >
+      {s.name}
+    </Link>
+  </td>
                 <td>{s.email}</td>
                 <td>{s.startMonth}</td>
                 <td>

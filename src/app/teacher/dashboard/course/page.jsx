@@ -4,13 +4,18 @@ import Link from "next/link";
 import { db } from "@/firebase/clientApp";
 import {
   collection,
+  query,
+  where,
+  getCountFromServer,
   addDoc,
   serverTimestamp,
   updateDoc,
   deleteDoc,
   doc,
   onSnapshot,
+  increment ,
 } from "firebase/firestore";
+
 import "./page.css";
 
 export default function CoursesPage() {
@@ -24,20 +29,43 @@ export default function CoursesPage() {
   });
   const [activeYear, setActiveYear] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
 
   // ✅ Firestoreからコースをリアルタイム取得
-  useEffect(() => {
-    const coursesRef = collection(db, "courses");
-    const unsubscribe = onSnapshot(coursesRef, (snapshot) => {
-      const fetchedCourses = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setCourses(fetchedCourses);
-    });
+ useEffect(() => {
+  const coursesRef = collection(db, "courses");
 
-    return () => unsubscribe();
-  }, []);
+  const unsubscribe = onSnapshot(coursesRef, async (snapshot) => {
+    try {
+      const fetchedCourses = await Promise.all(
+        snapshot.docs.map(async (docSnap) => {
+          const courseData = { id: docSnap.id, ...docSnap.data() };
+
+          try {
+            // Count students who have courseId equal to this course id
+            const studentsRef = collection(db, "students");
+            const q = query(studentsRef, where("courseId", "==", docSnap.id));
+            const countSnap = await getCountFromServer(q);
+            const studentCount = countSnap.data()?.count ?? 0;
+
+            return { ...courseData, students: studentCount };
+          } catch (err) {
+            console.error("count error for course", docSnap.id, err);
+            // fallback to stored field
+            return { ...courseData, students: courseData.students ?? 0 };
+          }
+        })
+      );
+
+      setCourses(fetchedCourses);
+    } catch (err) {
+      console.error("Error processing courses snapshot", err);
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
+
 
   // ✅ 新しいコースを追加
   const handleAddCourse = async () => {
@@ -64,7 +92,7 @@ export default function CoursesPage() {
       fee: newCourse.fee,
       pricePerMonth: parsedPrice,
       year: newCourse.year,
-      students: 0,
+      students: newCourse.students || 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -110,7 +138,7 @@ export default function CoursesPage() {
   return (
     <div className="courses-page">
       <header className="courses-header">
-        <h2>Courses Management</h2>
+        <h2>コース管理</h2>
 
         <div className="filter-tabs">
           <button
@@ -134,7 +162,7 @@ export default function CoursesPage() {
         </div>
 
         <button className="add-btn" onClick={() => setIsModalOpen(true)}>
-          + New Course
+          +コース追加
         </button>
       </header>
 
@@ -142,10 +170,10 @@ export default function CoursesPage() {
         <thead>
           <tr>
             <th>No</th>
-            <th>Course Name</th>
-            <th>Fee</th>
-            <th>Students</th>
-            <th>Year</th>
+            <th>コース名</th>
+            <th>学費</th>
+            <th>学生数</th>
+            <th>学年</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -154,19 +182,28 @@ export default function CoursesPage() {
             <tr key={c.id}>
               <td>{index + 1}</td>
               <td>
-                {c.nameJa && c.nameEn
+                {/* {c.nameJa && c.nameEn
                   ? `${c.nameJa} / ${c.nameEn}`
-                  : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
+                  : c.name || c.nameJa || c.nameEn || c.courseKey || c.id} */}
+                  <Link
+                    href={`/teacher/dashboard/course/${c.courseKey ?? c.id}`}
+                    className="course-link"
+                  >
+                    {c.nameJa && c.nameEn
+                      ? `${c.nameJa} / ${c.nameEn}`
+                      : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
+ 　　　　　　　　　 </Link>   
               </td>
               <td>{c.fee}</td>
               <td>{c.students ?? 0}</td>
               <td>{c.year}</td>
               <td>
                 <Link
-                  href={`/teacher/dashboard/course/${c.courseKey ?? c.id}`}
+// href={`/teacher/dashboard/course/${c.courseKey ?? c.id}/edit`}
+href={`/teacher/dashboard/course/${c.id}/edit`}
                   className="view-btn"
                 >
-                  View
+                  Edit
                 </Link>
                 <button
                   className="delete-btn"
@@ -174,12 +211,7 @@ export default function CoursesPage() {
                 >
                   Delete
                 </button>
-                {/* <button
-                  className="edit-btn"
-                  onClick={() => handleEditCourse(c.id)}
-                >
-                  Edit
-                </button> */}
+                
               </td>
             </tr>
           ))}
@@ -199,22 +231,7 @@ export default function CoursesPage() {
                 setNewCourse({ ...newCourse, name: e.target.value })
               }
             />
-            {/* <input
-              type="text"
-              placeholder="Course Name (日本語、任意)"
-              value={newCourse.nameJa}
-              onChange={(e) =>
-                setNewCourse({ ...newCourse, nameJa: e.target.value })
-              }
-            /> */}
-            {/* <input
-              type="text"
-              placeholder="Course Name (English, optional)"
-              value={newCourse.nameEn}
-              onChange={(e) =>
-                setNewCourse({ ...newCourse, nameEn: e.target.value })
-              }
-            /> */}
+           
             <input
               type="text"
               placeholder="Fee (e.g. ¥900,000)"
