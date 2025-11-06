@@ -307,33 +307,96 @@ export default function StudentDashboardPage() {
         setComputedTuition(null);
         return;
       }
+      // ローカルで student の学年表記 (EN/JP) を算出
+      let displayStudentYearLocal = null;
+      if (student?.studentId) {
+        const sid = String(student.studentId);
+        if (sid.length >= 3) {
+          const cohortDigits = sid.slice(1, 3);
+          if (!Number.isNaN(Number(cohortDigits))) {
+            const cohortFull = 2000 + Number(cohortDigits);
+            const nowYear = new Date().getFullYear();
+            displayStudentYearLocal = nowYear - cohortFull + 1;
+            if (displayStudentYearLocal < 1) displayStudentYearLocal = 1;
+          }
+        }
+      }
+
+      const makeOrdinalLocal = (n) => {
+        if (!Number.isFinite(n)) return `${n}`;
+        if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
+        switch (n % 10) {
+          case 1:
+            return `${n}st`;
+          case 2:
+            return `${n}nd`;
+          case 3:
+            return `${n}rd`;
+          default:
+            return `${n}th`;
+        }
+      };
+
+      const studentYearJP =
+        student?.year ||
+        student?.gradeJP ||
+        (displayStudentYearLocal ? `${displayStudentYearLocal}年生` : null);
+      const studentYearEN =
+        student?.grade ||
+        (displayStudentYearLocal
+          ? `${makeOrdinalLocal(displayStudentYearLocal)} Year`
+          : null);
 
       try {
-        // 1️⃣ courseId が "web" のような短縮文字列 → Firestore内の name フィールドと照合
-        const q = query(
-          collection(db, "courses"),
-          where("courseKey", "==", student.courseId),
-          // where("courseKey", "<=", student.courseId + "\uf8ff"),
-          limit(1)
-        );
+        // 1️⃣ まずは courseKey と学年が一致するコースを優先的に検索する
+        let qsnap = null;
+        if (studentYearEN) {
+          const qpref = query(
+            collection(db, "courses"),
+            where("courseKey", "==", student.courseId),
+            where("year", "==", studentYearEN),
+            limit(1)
+          );
+          qsnap = await getDocs(qpref);
+        }
 
-        const qsnap = await getDocs(q);
+        if ((!qsnap || qsnap.empty) && studentYearJP) {
+          const qpref2 = query(
+            collection(db, "courses"),
+            where("courseKey", "==", student.courseId),
+            where("year", "==", studentYearJP),
+            limit(1)
+          );
+          qsnap = await getDocs(qpref2);
+        }
 
-        if (!qsnap.empty) {
+        // それでも見つからなければ courseKey のみでフォールバック
+        if (!qsnap || qsnap.empty) {
+          const q = query(
+            collection(db, "courses"),
+            where("courseKey", "==", student.courseId),
+            limit(1)
+          );
+          qsnap = await getDocs(q);
+        }
+
+        if (qsnap && !qsnap.empty) {
           const docSnap = qsnap.docs[0];
           const d = docSnap.data();
 
-          // 2️⃣ 金額の取得優先順位
-          const totalFee =
-            Number(d.pricePerMonth) || Number(d.fee) || Number(d.tuition) || 0;
+          // 2️⃣ 金額の取得: コース側に total (fee) があれば優先、無ければ monthly を使う
+          const monthly = Number(d.pricePerMonth) || null;
+          const totalFee = Number(d.fee) || Number(d.tuition) || null;
+          const displayTotal = totalFee ?? monthly ?? 0;
 
-          // 3️⃣ コース情報を保存
+          // 3️⃣ コース情報を保存（総額と月額を両方保持）
           setCourseInfo({
             id: docSnap.id,
             name: d.name || "未設定",
-            pricePerMonth: totalFee,
+            pricePerMonth: monthly,
+            totalFee: totalFee,
           });
-          setComputedTuition(totalFee);
+          setComputedTuition(displayTotal);
         } else {
           // フォールバック検索: courseKey のプレフィックスやコース名で探す
           let found = false;
@@ -350,17 +413,16 @@ export default function StudentDashboardPage() {
             if (!qsnap2.empty) {
               const docSnap = qsnap2.docs[0];
               const d = docSnap.data();
-              const totalFee =
-                Number(d.pricePerMonth) ||
-                Number(d.fee) ||
-                Number(d.tuition) ||
-                0;
+              const monthly = Number(d.pricePerMonth) || null;
+              const totalFee = Number(d.fee) || Number(d.tuition) || null;
+              const displayTotal = totalFee ?? monthly ?? 0;
               setCourseInfo({
                 id: docSnap.id,
                 name: d.name || "未設定",
-                pricePerMonth: totalFee,
+                pricePerMonth: monthly,
+                totalFee: totalFee,
               });
-              setComputedTuition(totalFee);
+              setComputedTuition(displayTotal);
               found = true;
             }
           } catch (err) {
@@ -392,17 +454,16 @@ export default function StudentDashboardPage() {
                 if (!snap3.empty) {
                   const docSnap = snap3.docs[0];
                   const d = docSnap.data();
-                  const totalFee =
-                    Number(d.pricePerMonth) ||
-                    Number(d.fee) ||
-                    Number(d.tuition) ||
-                    0;
+                  const monthly = Number(d.pricePerMonth) || null;
+                  const totalFee = Number(d.fee) || Number(d.tuition) || null;
+                  const displayTotal = totalFee ?? monthly ?? 0;
                   setCourseInfo({
                     id: docSnap.id,
                     name: d.name || "未設定",
-                    pricePerMonth: totalFee,
+                    pricePerMonth: monthly,
+                    totalFee: totalFee,
                   });
-                  setComputedTuition(totalFee);
+                  setComputedTuition(displayTotal);
                   found = true;
                   break;
                 }
@@ -428,7 +489,15 @@ export default function StudentDashboardPage() {
     };
 
     fetchCourse();
-  }, [_courseKeyAndFees, student?.courseId, student?.totalFees]);
+  }, [
+    _courseKeyAndFees,
+    student?.courseId,
+    student?.totalFees,
+    student?.studentId,
+    student?.grade,
+    student?.gradeJP,
+    student?.year,
+  ]);
 
   // 🔹 支払い履歴をリアルタイム取得
   useEffect(() => {
@@ -527,7 +596,8 @@ export default function StudentDashboardPage() {
   // 🔹 支払い状況計算
   // total: prefer courseInfo.pricePerMonth, then computedTuition, courseTuition, student.totalFees
   const total = Number(
-    courseInfo?.pricePerMonth ??
+    courseInfo?.totalFee ??
+      courseInfo?.pricePerMonth ??
       computedTuition ??
       courseTuition ??
       student?.totalFees ??
@@ -557,6 +627,47 @@ export default function StudentDashboardPage() {
         if (displayStudentYear < 1) displayStudentYear = 1;
       }
     }
+  }
+
+  // コース名に学年を付与して表示するための整形
+  const makeOrdinal = (n) => {
+    if (!Number.isFinite(n)) return `${n}`;
+    if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
+    switch (n % 10) {
+      case 1:
+        return `${n}st`;
+      case 2:
+        return `${n}nd`;
+      case 3:
+        return `${n}rd`;
+      default:
+        return `${n}th`;
+    }
+  };
+
+  // 学年ラベルの優先順位: student.year -> student.gradeJP -> student.grade -> computed displayStudentYear
+  const studentYearJP =
+    student?.year ||
+    student?.gradeJP ||
+    (displayStudentYear ? `${displayStudentYear}年生` : null);
+  const studentYearEN =
+    student?.grade ||
+    (displayStudentYear ? `${makeOrdinal(displayStudentYear)} Year` : null);
+
+  // コース名表示: 日本語名が含まれる場合は日本語学年を使い、英語名なら英語学年を使う
+  const rawCourseName =
+    courseInfo?.name ??
+    student?.courseId ??
+    session.user.courseName ??
+    "未設定";
+  const hasJapanese = /[\u3040-\u30ff\u4e00-\u9faf]/.test(
+    String(rawCourseName)
+  );
+  let courseDisplayName = rawCourseName;
+  if (hasJapanese) {
+    if (studentYearJP) courseDisplayName = `${rawCourseName} ${studentYearJP}`;
+  } else {
+    if (studentYearEN) courseDisplayName = `${rawCourseName} ${studentYearEN}`;
   }
 
   return (
@@ -595,13 +706,7 @@ export default function StudentDashboardPage() {
           <h1 className={styles.title}>支払い状況</h1>
 
           <div className={styles.infoBox}>
-            <div>
-              コース:{" "}
-              {courseInfo?.name ??
-                student?.courseId ??
-                session.user.courseName ??
-                "未設定"}
-            </div>
+            <div>コース: {courseDisplayName}</div>
           </div>
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
