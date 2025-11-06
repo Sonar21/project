@@ -2,7 +2,11 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { createOrGetUserByEmail, validateUserCredentials } from "@/data/users";
+import {
+  createOrGetUserByEmail,
+  validateUserCredentials,
+  isAllowedInstitutionEmail,
+} from "@/data/users";
 import admin, { adminDb } from "@/firebase/adminApp";
 
 // Define your auth options first
@@ -15,7 +19,10 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const user = validateUserCredentials(credentials.studentId, credentials.password);
+        const user = validateUserCredentials(
+          credentials.studentId,
+          credentials.password
+        );
         if (user) return user;
         return null;
       },
@@ -32,8 +39,11 @@ export const authOptions = {
         },
       },
       async profile(profile) {
+        // Only allow institutional emails for Google sign-in
+        if (!isAllowedInstitutionEmail(profile.email)) return null;
         // Custom role logic for Google users
         const user = createOrGetUserByEmail(profile.email, profile.name);
+        if (!user) return null;
         return {
           id: user.id,
           name: user.name,
@@ -61,12 +71,16 @@ export const authOptions = {
         if (account?.provider === "google") {
           const email = user?.email;
           if (!email) return true;
+          // block non-institutional emails
+          if (!isAllowedInstitutionEmail(email)) return false;
 
           // use local part of email as studentId (matches in-memory user creation)
           const lower = String(email).toLowerCase();
           const local = lower.split("@")[0] || lower;
 
-          const studentDocRef = adminDb.collection("students").doc(String(local));
+          const studentDocRef = adminDb
+            .collection("students")
+            .doc(String(local));
           let studentSnap = null;
 
           // If the DocumentReference exposes get(), use it; otherwise fall back to a query.
@@ -126,9 +140,28 @@ export const authOptions = {
       }
     },
     // After sign-in redirect students to student dashboard
-    async redirect({ url, baseUrl }) {
-      // Always redirect to student dashboard after sign-in
-      return "\/student\/dashboard";
+    // Decide redirect after sign-in. Priority:
+    // 1) honor relative or same-origin callbackUrl (so /auth/redirect works)
+    // 2) if no callbackUrl or external, route based on token.role
+    async redirect({ url, baseUrl, token }) {
+      // If URL is relative, prefix with baseUrl and honor it
+      if (url && url.startsWith("/")) return `${baseUrl}${url}`;
+      // If URL is absolute and same-origin, honor it
+      if (url) {
+        try {
+          const target = new URL(url);
+          if (target.origin === baseUrl) return url;
+        } catch (e) {
+          // malformed url, proceed to token-based routing
+        }
+      }
+
+      // No valid callbackUrl provided -> route based on role in token
+      if (token?.role === "teacher") return `${baseUrl}/teacher/dashboard`;
+      if (token?.role === "student") return `${baseUrl}/student/dashboard`;
+
+      // Fallback to baseUrl
+      return baseUrl;
     },
   },
 

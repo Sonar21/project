@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { db } from "@/firebase/clientApp";
+import StudentAutoRegister from "@/components/StudentAutoRegister";
 import {
   doc,
   updateDoc,
@@ -145,6 +146,66 @@ export default function StudentDashboardPage() {
       const id = String(studentId || "")
         .toLowerCase()
         .trim();
+      // --- ① もしコース名や日本語名が入力されている場合に対応 ---
+      const name = id
+        .replace(/\s+/g, "")
+        .replace("コース", "")
+        .replace("科", ""); // 「コース」「科」を削除して判定
+      const nameMap = {
+        japanese: [
+          "日本語ビジネス",
+          "日本語ビジネスコース",
+          "japanese",
+          "japanesebusiness",
+        ],
+        kokusai: [
+          "国際ビジネス",
+          "国際ビジネスコース",
+          "international",
+          "business",
+        ],
+        it: ["情報技術", "it", "itコース"],
+        web: ["web", "ウェブ", "ウェブプログラミング", "webプログラミング"],
+        global: ["グローバル", "global"],
+      };
+      // ① 日本語 or 英語名ベースでマッチするかチェック
+      for (const [key, values] of Object.entries(nameMap)) {
+        if (values.some((v) => name.includes(v))) return key;
+      }
+      // ② Firestore の courses からもチェック（name が日本語のみ登録されている場合）
+      try {
+        const q = query(collection(db, "courses"));
+        const qsnap = await getDocs(q);
+        for (const docSnap of qsnap.docs) {
+          const d = docSnap.data();
+          const courseName = (d.name || "").replace(/\s+/g, "");
+          if (
+            courseName &&
+            name.includes(courseName.replace("コース", "").replace("科", ""))
+          ) {
+            return (
+              d.courseKey ||
+              (d.nameEn?.toLowerCase().replace(/\s+/g, "") ?? "unknown")
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("Firestore からの courseKey 判定エラー:", err);
+      }
+
+      // switch (name) {
+      //   // 日本語ビジネスコース or Japanese Business
+      //   case "japanesebusiness":
+      //   case "日本語ビジネス":
+      //   case "日本語ビジネスコース":
+      //     return "japanese";
+      //   default:
+      //     break;
+      // }
+      // // 日本語・英語名をチェック
+      // for (const [key, values] of Object.entries(nameMap)) {
+      //   if (values.some((v) => name.includes(v))) return key;
+      // }
 
       if (!id) return "unknown";
 

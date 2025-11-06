@@ -67,6 +67,35 @@ export default function CoursesPage() {
 }, []);
 
 
+    
+  // ✅ 日本語・英語どちらでも courseKey を自動判定する関数
+  const determineCourseKey = (courseName = "") => {
+    const name = courseName
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "")
+      .replace("コース", "")
+      .replace("科", "");
+
+    const nameMap = {
+      japanese: ["日本語ビジネス", "日本語", "japanese", "japanesebusiness"],
+      kokusai: ["国際ビジネスコース", "国際", "kokusai", "kokusaiBussiness"],
+      it: ["it", "情報技術"],
+      web: ["web", "ウェブ", "webプログラミング", "ウェブプログラミング"],
+      global: ["global", "グローバル", "globalbusiness", "グローバルビジネス"],
+    };
+
+    for (const [key, values] of Object.entries(nameMap)) {
+      if (values.some((v) => name.includes(v))) {
+        return key;
+      }
+    }
+
+    // fallback（英語スラッグ化）
+    return name.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  };
+
+
   // ✅ 新しいコースを追加
   const handleAddCourse = async () => {
     if (!newCourse.name || !newCourse.fee || !newCourse.year)
@@ -76,19 +105,21 @@ export default function CoursesPage() {
     const parsedPrice = Number(
       String(newCourse.fee).replace(/[^0-9.-]+/g, "") || 0
     );
+    // 🔹 日本語でも courseKey 自動判定
+    const courseKey = determineCourseKey(newCourse.name);
 
-    // generate a courseKey slug from name
-    const generatedKey = String(newCourse.name || "")
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
+    // // generate a courseKey slug from name
+    // const generatedKey = String(newCourse.name || "")
+    //   .toLowerCase()
+    //   .trim()
+    //   .replace(/[^a-z0-9]+/g, "-")
+    //   .replace(/^-+|-+$/g, "");
 
     const payload = {
       name: newCourse.name || newCourse.nameJa || newCourse.nameEn,
       nameJa: newCourse.nameJa || null,
       nameEn: newCourse.nameEn || null,
-      courseKey: generatedKey,
+      courseKey: courseKey || "",
       fee: newCourse.fee,
       pricePerMonth: parsedPrice,
       year: newCourse.year,

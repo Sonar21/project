@@ -2,7 +2,11 @@
 import { useSession } from "next-auth/react";
 import "./page.css";
 
+
 import Link from "next/link";
+
+
+
 
 
 export default function TeacherDashboard() {
@@ -10,6 +14,7 @@ export default function TeacherDashboard() {
   const user = session?.user;
 
   const stats = [
+
    {
     title: (
       <Link href="/teacher/dashboard/course" className="stat-card link-card" >
@@ -22,6 +27,10 @@ export default function TeacherDashboard() {
     { title: "収益合計", color: "#57C785" },
     { title: "アクティブコース", color: "#F0B84C" },
     { title: "支払い率", color: "#6C63FF" },
+
+   
+  //   
+
   ];
 
 
