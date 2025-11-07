@@ -15,6 +15,7 @@ import "./page.css";
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState([]);
+  const [students, setStudents] = useState([]);
   const [newCourse, setNewCourse] = useState({
     name: "",
     nameJa: "",
@@ -38,6 +39,17 @@ export default function CoursesPage() {
 
     return () => unsubscribe();
   }, []);
+
+  // ✅ students コレクションを購読して、コースごとの実数を表示する
+  useEffect(() => {
+    const studentsRef = collection(db, "students");
+    const unsub = onSnapshot(studentsRef, (snapshot) => {
+      const fetched = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setStudents(fetched);
+    });
+    return () => unsub();
+  }, []);
+
   // ✅ 日本語・英語どちらでも courseKey を自動判定する関数
   const determineCourseKey = (courseName = "") => {
     const name = courseName
@@ -187,7 +199,43 @@ export default function CoursesPage() {
                   : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
               </td>
               <td>{c.fee}</td>
-              <td>{c.students ?? 0}</td>
+              <td>
+                {students.filter((s) => {
+                  // 学年フィールドは student によって 'grade' (英語, e.g. "1st Year") や
+                  // 'gradeJP' に保存されているため、それらを優先して比較する
+                  const studentYear = s.grade || s.gradeJP || s.year || "";
+                  const sameYear =
+                    String(studentYear).trim() === String(c.year).trim();
+
+                  if (s.courseDocId) {
+                    // courseDocId が存在する場合は厳密に course ドキュメントID と学年で照合
+                    return (
+                      sameYear && s.courseDocId === (c.id ?? c.courseId ?? "")
+                    );
+                  }
+
+                  // フォールバック: student.courseId (legacy に courseKey が入っているケース) と学年で照合
+                  return (
+                    sameYear && s.courseId === (c.courseKey ?? c.courseId ?? "")
+                  );
+                }).length ||
+                  (c.students ?? 0)}
+              </td>
+
+              {/* <td>
+                {
+                  // 優先: students ドキュメントに保存されている courseDocId を使って厳密に照合
+                  students.filter((s) => {
+                    if (s.courseDocId) {
+                      // StudentAutoRegister が保存するドキュメントIDで比較
+                      return s.courseDocId === (c.id ?? c.courseId ?? "");
+                    }
+                    // フォールバック: 古いデータでは student.courseId に courseKey が入っている場合がある
+                    return s.courseId === (c.courseKey ?? c.courseId ?? "");
+                  }).length ||
+                    (c.students ?? 0)
+                }
+              </td> */}
               <td>{c.year}</td>
               <td>
                 <Link
