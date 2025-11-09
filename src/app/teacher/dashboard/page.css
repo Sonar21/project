@@ -1,5 +1,3 @@
-
-
 .dashboard {
   font-family: "Segoe UI", sans-serif;
   background-color: #f8fafc;
@@ -81,4 +79,66 @@
   margin-bottom: 12px;
   font-weight: 600;
   color: #444;
+}
+/* ===========================
+   STAT CARD BASE STYLES
+=========================== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+/* Hover lift effect */
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+}
+
+/* ===========================
+   LINK CARD (コース名)
+=========================== */
+.link-card {
+  color: #4f9dde;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.2rem;
+  display: block;
+  transition: all 0.3s ease;
+}
+
+/* Hover animation: subtle glow + underline */
+.link-card:hover {
+  color: #357bb8;
+  background: linear-gradient(145deg, #f0f7ff, #ffffff);
+  box-shadow: 0 6px 18px rgba(79, 157, 222, 0.25);
+  border-radius: 14px;
+}
+
+.link-card::after {
+  content: "";
+  display: block;
+  margin: 6px auto 0;
+  width: 0%;
+  height: 3px;
+  background-color: #4f9dde;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.link-card:hover::after {
+  width: 50%;
 }
