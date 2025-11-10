@@ -24,6 +24,7 @@ import {
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import styles from "./page.module.css";
+import PaymentSchedule from "@/components/PaymentSchedule";
 
 export default function StudentDashboardPage() {
   const { data: session, status } = useSession();
@@ -39,64 +40,65 @@ export default function StudentDashboardPage() {
   const [payments, setPayments] = useState([]); // 🔹 支払い履歴を保存する配列
 
   // 📸 レシートアップロード関数（支払い情報を記録）
-  const handleReceiptUpload = async () => {
-    if (!file || !student) return alert("ファイルを選択してください。");
+  // const handleReceiptUpload = async () => {
+  //   if (!file || !student) return alert("ファイルを選択してください。");
 
-    // 金額チェック
-    const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
-    if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
-      return alert("有効な金額を入力してください（例: 80000）");
-    }
-    setUploading(true);
+  //   // 金額チェック
+  //   const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
+  //   if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
+  //     return alert("有効な金額を入力してください（例: 80000）");
+  //   }
+  //   setUploading(true);
 
-    try {
-      // 1️⃣ Storage にファイルをアップロード
-      const storage = getStorage();
-      const fileRef = ref(
-        storage,
-        `receipts/${student.studentId}/${Date.now()}_${file.name}`,
-      );
-      await uploadBytes(fileRef, file);
+  //   try {
+  //     // 1️⃣ Storage にファイルをアップロード
+  //     const storage = getStorage();
+  //     const fileRef = ref(
+  //       storage,
+  //       `receipts/${student.studentId}/${Date.now()}_${file.name}`,
+  //     );
+  //     await uploadBytes(fileRef, file);
 
-      // 2️⃣ URLを取得
-      const url = await getDownloadURL(fileRef);
+  //     // 2️⃣ URLを取得
+  //     const url = await getDownloadURL(fileRef);
 
-      // 3️⃣ Firestoreに支払い情報を追加
-      const paymentsRef = collection(db, "payments");
-      const paymentPayload = {
-        studentId: student.studentId,
-        course: student.courseId || "未設定",
-        receiptUrl: url,
-        amount: numericAmount, // 入力金額
-        paymentMethod: "銀行振込", // 支払い方法（例）
-        status: "支払い済み", // 支払い状態
-        createdAt: serverTimestamp(), // 支払った日時（自動）
-      };
+  //     // 3️⃣ Firestoreに支払い情報を追加
+  //     const paymentsRef = collection(db, "payments");
+  //     const paymentPayload = {
+  //       studentId: student.studentId,
+  //       course: student.courseId || "未設定",
+  //       receiptUrl: url,
+  //       amount: numericAmount, // 入力金額
+  //       paymentMethod: "銀行振込", // 支払い方法（例）
+  //       status: "支払い済み", // 支払い状態
+  //       createdAt: serverTimestamp(), // 支払った日時（自動）
+  //     };
 
-      const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
+  //     const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
 
-      // 追加フィールド: paymentId, uploadedAt, verified, month
-      const monthValue =
-        student.startMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
-      await updateDoc(doc(db, "payments", paymentDocRef.id), {
-        paymentId: paymentDocRef.id,
-        uploadedAt: serverTimestamp(),
-        verified: false,
-        month: monthValue,
-      });
+  //     // 追加フィールド: paymentId, uploadedAt, verified, month
+  //     const monthValue =
+  //       student.startMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
+  //     await updateDoc(doc(db, "payments", paymentDocRef.id), {
+  //       paymentId: paymentDocRef.id,
+  //       uploadedAt: serverTimestamp(),
+  //       verified: false,
+  //       month: monthValue,
+  //     });
 
-      alert("支払い情報を保存しました！");
-      setFile(null);
-      setAmount("");
-    } catch (err) {
-      console.error("アップロードエラー:", err);
-      alert("アップロードに失敗しました。");
-    } finally {
-      setUploading(false);
-    }
-  };
+  //     alert("支払い情報を保存しました！");
+  //     setFile(null);
+  //     setAmount("");
+  //   } catch (err) {
+  //     console.error("アップロードエラー:", err);
+  //     alert("アップロードに失敗しました。");
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
 
   // 🔹 ログイン中の学生情報をFirestoreからリアルタイム取得
+  <StudentAutoRegister/>
   useEffect(() => {
     if (status !== "authenticated") {
       setLoading(false);
@@ -780,7 +782,7 @@ export default function StudentDashboardPage() {
           }`}
           onClick={() => setActiveTab("history")}
         >
-          履歴
+          毎月の支払い
         </button>
         <button
           className={`${styles.tab} ${
@@ -836,18 +838,11 @@ export default function StudentDashboardPage() {
       {/* 🔹 履歴タブ */}
       {activeTab === "history" && (
         <section className={styles.card}>
-          <h2 className={styles.title}>支払い履歴</h2>
+          {/* <h2 className={styles.title}>支払い履歴</h2> */}
+          <PaymentSchedule student={student} courseInfo={courseInfo} payments={payments} />
 
           <table className={styles.paymentTable}>
-            <thead>
-              <tr>
-                <th>日付</th>
-                <th>時間</th>
-                <th>金額</th>
-                <th>状態</th>
-                <th>詳細</th>
-              </tr>
-            </thead>
+           
             <tbody>
               {payments.map((p) => {
                 const date = p.createdAt?.toDate

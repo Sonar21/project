@@ -351,6 +351,14 @@ export default function CoursesPage() {
                 setNewCourse({ ...newCourse, fee: e.target.value })
               }
             />
+             <input
+              type="text"
+              placeholder="permonth (e.g. ¥80000)"
+              value={newCourse.permonth}
+              onChange={(e) =>
+                setNewCourse({ ...newCourse, permonth: e.target.value })
+              }
+            />
             <select
               value={newCourse.year}
               onChange={(e) =>

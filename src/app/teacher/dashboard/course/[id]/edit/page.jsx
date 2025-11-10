@@ -91,6 +91,16 @@ export default function EditCoursePage() {
             onChange={(e) => setCourse({ ...course, name: e.target.value })}
           />
         </div>
+        
+        <div className="edit-field">
+          <label>月額料金</label>
+          <input
+            type="text"
+            value={course.permonth || ""}
+            onChange={(e) => setCourse({ ...course, permonth: e.target.value })}
+          />
+        </div>
+
 
         <div className="edit-field">
           <label>学費</label>
