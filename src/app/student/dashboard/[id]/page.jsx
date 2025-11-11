@@ -192,7 +192,7 @@ export default function StudentDashboardPage() {
   }, [status, session, id]);
 
   // -----------------------------------------
-  // 🔹 Get course info
+  // 🔹 Get course infooo
   // -----------------------------------------
   useEffect(() => {
     const fetchCourse = async () => {
