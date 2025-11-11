@@ -1,48 +1,87 @@
-:root{
-  --gap:8px;
-  --pad:8px;
-  --muted:#666;
-  --border:#eee;
-  --input-border:#ddd;
+:root {
+  --gap: 8px;
+  --pad: 8px;
+  --muted: #666;
+  --border: #eee;
+  --input-border: #ddd;
 }
 
-.yearLabel{
-  margin-bottom:12px;
-  font-weight:600;
+.yearLabel {
+  margin-bottom: 12px;
+  font-weight: 600;
 }
 
-.loading{
-  margin-bottom:8px;
-  color:var(--muted);
+.loading {
+  margin-bottom: 8px;
+  color: var(--muted);
 }
 
-.tableWrap{
-  overflow-x:auto;
+.tableWrap {
+  overflow-x: auto;
 }
 
-.table{
-  width:100%;
-  border-collapse:collapse;
- 
+.table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.thLeft{ text-align:left; padding:var(--pad); }
-.thRight{ text-align:left; padding:var(--pad); }
-.thCenter{ text-align:left; padding:var(--pad); }
-
-.td{ padding:var(--pad); }
-.tdRight{ padding:var(--pad); text-align:left; }
-.tdCenter{ padding:var(--pad); text-align:left; }
-
-.rowBorder{ border-top:1px solid var(--border); }
-
-.inputAmount{
-  width:120px;
-  text-align:center;
-  padding:6px 8px;
-  border-radius:6px;
-  border:1px solid var(--input-border);
+.thLeft {
+  text-align: left;
+  padding: var(--pad);
+}
+.thRight {
+  text-align: left;
+  padding: var(--pad);
+}
+.thCenter {
+  text-align: left;
+  padding: var(--pad);
 }
 
-.receiptCell{ padding:var(--pad); }
-.statusText{ font-weight:500; }
+.td {
+  padding: var(--pad);
+}
+.tdRight {
+  padding: var(--pad);
+  text-align: left;
+}
+.tdCenter {
+  padding: var(--pad);
+  text-align: left;
+}
+
+.rowBorder {
+  border-top: 1px solid var(--border);
+}
+
+.inputAmount {
+  width: 120px;
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+}
+
+.hiddenAmount {
+  display: inline-block;
+  padding: 6px 8px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.amountText {
+  display: inline-block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.receiptCell {
+  padding: var(--pad);
+}
+.statusText {
+  font-weight: 500;
+}

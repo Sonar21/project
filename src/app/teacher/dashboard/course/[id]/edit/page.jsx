@@ -47,12 +47,25 @@ export default function EditCoursePage() {
 
     try {
       const docRef = doc(db, "courses", id);
-      await updateDoc(docRef, {
+      // normalize permonth -> numeric pricePerMonth and keep permonth string for display
+      const permonthStr = String(course.permonth || "").trim();
+      const parsed = Number(permonthStr.replace(/[^0-9.-]+/g, "")) || null;
+      const updatePayload = {
         name: course.name,
         fee: course.fee,
         year: course.year,
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (permonthStr !== "") {
+        updatePayload.pricePerMonth = parsed;
+        updatePayload.permonth = permonthStr;
+      } else {
+        // if empty, remove numeric field? we'll set to null
+        updatePayload.pricePerMonth = null;
+        updatePayload.permonth = null;
+      }
+
+      await updateDoc(docRef, updatePayload);
       alert("コース情報を更新しました！");
       router.push("/teacher/dashboard/course");
     } catch (err) {

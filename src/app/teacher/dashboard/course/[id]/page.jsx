@@ -2,18 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-<<<<<<< HEAD
 import { collection, query, where, onSnapshot, doc, deleteDoc } from "firebase/firestore";
-=======
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  deleteDoc,
-} from "firebase/firestore";
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
 import { db } from "@/firebase/clientApp";
 import Link from "next/link";
 import "./detail.css";
@@ -28,16 +17,6 @@ export default function CourseDetailPage() {
   useEffect(() => {
     if (!id) return;
 
-<<<<<<< HEAD
-    const q = query(collection(db, "students"), where("courseId", "==", id));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id, // Firestore document ID
-        ...doc.data(),
-      }));
-      setStudents(list);
-=======
     // Subscribe to students where courseId == id and where courseDocId == id
     // Merge results and deduplicate by document id so students stored under
     // either field are shown in the course detail.
@@ -46,21 +25,12 @@ export default function CourseDetailPage() {
 
     const map = new Map();
 
-    const updateFromSnapshot = (snapshot) => {
-      snapshot.docs.forEach((d) => {
-        map.set(d.id, { id: d.id, ...d.data() });
-      });
-      setStudents(Array.from(map.values()));
-    };
-
     const unsub1 = onSnapshot(qByCourseId, (snapshot) => {
-      // rebuild map entries from this query only (avoid stale deletions)
-      // but keep other query's entries intact
+      // rebuild/merge entries from this query
       snapshot.docs.forEach((d) => {
         map.set(d.id, { id: d.id, ...d.data() });
       });
       setStudents(Array.from(map.values()));
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
     });
 
     const unsub2 = onSnapshot(qByCourseDocId, (snapshot) => {
@@ -142,19 +112,12 @@ export default function CourseDetailPage() {
 
                 {/* Student Name → link to teacher’s student detail */}
                 <td>
-<<<<<<< HEAD
-                 <Link href={`/student/dashboard/${s.studentId}`} className="text-blue-600 hover:underline">
-  {s.name}
-</Link>
-
-=======
                   <Link
                     href={`/student/dashboard/${s.studentId}`}
                     className="text-blue-600 hover:underline"
                   >
                     {s.name}
                   </Link>
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
                 </td>
 
                 <td>{s.email}</td>
@@ -178,11 +141,11 @@ export default function CourseDetailPage() {
                     onClick={() => handleDeleteStudent(s.id)}
                     className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                   >
-<<<<<<< HEAD
-                    🗑️ 削除
-=======
+
                     削除
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
+
+                  
+
                   </button>
                 </td>
               </tr>
