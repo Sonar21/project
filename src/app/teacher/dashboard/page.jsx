@@ -2,38 +2,28 @@
 import { useSession } from "next-auth/react";
 import "./page.css";
 
-
 import Link from "next/link";
-
-
-
-
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
   const user = session?.user;
 
   const stats = [
-
-   {
-    title: (
-      <Link href="/teacher/dashboard/course" className="stat-card link-card" >
-        コース名
-      </Link>
-    ),
-    color: "#4F9DDE", 
-  },
+    {
+      title: (
+        <Link href="/teacher/dashboard/course" className="stat-card link-card">
+          コース名
+        </Link>
+      ),
+      color: "#4F9DDE",
+    },
 
     { title: "収益合計", color: "#57C785" },
     { title: "アクティブコース", color: "#F0B84C" },
     { title: "支払い率", color: "#6C63FF" },
 
-   
-  //   
-
+    //
   ];
-
-
 
   return (
     <div className="dashboard">
@@ -45,15 +35,15 @@ export default function TeacherDashboard() {
       {/* === Stats Cards === */}
       <div className="stats-grid">
         {stats.map((s, i) => (
-          <div key={i} className="stat-card" style={{ borderTop: `4px solid ${s.color}` }}>
+          <div
+            key={i}
+            className="stat-card"
+            style={{ borderTop: `4px solid ${s.color}` }}
+          >
             <p className="stat-title">{s.title}</p>
-            
           </div>
         ))}
       </div>
-
-    
-
     </div>
   );
 }

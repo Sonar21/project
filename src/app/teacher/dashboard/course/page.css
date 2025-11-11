@@ -153,12 +153,12 @@
   color: white;
 }
 .course-link {
-  text-decoration: none;  /* 🔹 removes underline */
-  color: #0070f3;         /* you can change color if you want */
+  text-decoration: none; /* 🔹 removes underline */
+  color: #0070f3; /* you can change color if you want */
   font-weight: 600;
 }
 
 .course-link:hover {
-  color: #0051a3;         /* darker color on hover */
-  text-decoration: none;  /* keep underline off even when hovering */
+  color: #0051a3; /* darker color on hover */
+  text-decoration: none; /* keep underline off even when hovering */
 }

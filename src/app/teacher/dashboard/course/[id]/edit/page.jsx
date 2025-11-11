@@ -2,7 +2,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/firebase/clientApp";
-import { doc, getDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import "./edit.css";
 
 export default function EditCoursePage() {
@@ -85,6 +91,16 @@ export default function EditCoursePage() {
             onChange={(e) => setCourse({ ...course, name: e.target.value })}
           />
         </div>
+        
+        <div className="edit-field">
+          <label>月額料金</label>
+          <input
+            type="text"
+            value={course.permonth || ""}
+            onChange={(e) => setCourse({ ...course, permonth: e.target.value })}
+          />
+        </div>
+
 
         <div className="edit-field">
           <label>学費</label>
@@ -110,7 +126,7 @@ export default function EditCoursePage() {
           <button className="save-btn" onClick={handleUpdate}>
             💾 保存
           </button>
-        
+
           <button
             className="cancel-btn"
             onClick={() => router.push("/teacher/dashboard/course")}

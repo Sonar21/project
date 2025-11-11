@@ -7,15 +7,19 @@ import Link from "next/link";
 import styles from "./LoginForm.module.css";
 import Image from "next/image";
 
-
 const LoginForm = () => {
-    return (
-        <form action={doSocialLogin}>
-            <button className="bg-pink-400 text-white p-1 rounded-md m-1 text-lg" type="submit" name="action" value="google">
-                change with google
-            </button>
-        </form>
-    );
+  return (
+    <form action={doSocialLogin}>
+      <button
+        className="bg-pink-400 text-white p-1 rounded-md m-1 text-lg"
+        type="submit"
+        name="action"
+        value="google"
+      >
+        change with google
+      </button>
+    </form>
+  );
 };
 
 const SignInPage = () => {
@@ -45,7 +49,7 @@ const SignInPage = () => {
     if (res && res.error) {
       // show provider returned message when available
       setError(
-        res.error || "ログインに失敗しました。資格情報を確認してください。"
+        res.error || "ログインに失敗しました。資格情報を確認してください。",
       );
       return;
     }

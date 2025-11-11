@@ -52,7 +52,7 @@ export default function AdminUsersPage() {
             <th>studentId</th>
             <th>name</th>
             <th>role</th>
-                <th>course</th>
+            <th>course</th>
             <th>action</th>
           </tr>
         </thead>
@@ -62,7 +62,7 @@ export default function AdminUsersPage() {
               <td>{u.studentId}</td>
               <td>{u.name}</td>
               <td>{u.role}</td>
-                <td>
+              <td>
                 <select
                   value={u.courseId || ""}
                   onChange={(e) => changeCourse(u.studentId, e.target.value)}
@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
                   onClick={() =>
                     changeRole(
                       u.studentId,
-                      u.role === "student" ? "teacher" : "student"
+                      u.role === "student" ? "teacher" : "student",
                     )
                   }
                 >

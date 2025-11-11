@@ -19,10 +19,12 @@ import {
   getDoc,
   setDoc,
   increment,
+  runTransaction,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import styles from "./page.module.css";
+import PaymentSchedule from "@/components/PaymentSchedule";
 
 export default function StudentDashboardPage() {
   const { data: session, status } = useSession();
@@ -38,64 +40,65 @@ export default function StudentDashboardPage() {
   const [payments, setPayments] = useState([]); // 🔹 支払い履歴を保存する配列
 
   // 📸 レシートアップロード関数（支払い情報を記録）
-  const handleReceiptUpload = async () => {
-    if (!file || !student) return alert("ファイルを選択してください。");
+  // const handleReceiptUpload = async () => {
+  //   if (!file || !student) return alert("ファイルを選択してください。");
 
-    // 金額チェック
-    const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
-    if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
-      return alert("有効な金額を入力してください（例: 80000）");
-    }
-    setUploading(true);
+  //   // 金額チェック
+  //   const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
+  //   if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
+  //     return alert("有効な金額を入力してください（例: 80000）");
+  //   }
+  //   setUploading(true);
 
-    try {
-      // 1️⃣ Storage にファイルをアップロード
-      const storage = getStorage();
-      const fileRef = ref(
-        storage,
-        `receipts/${student.studentId}/${Date.now()}_${file.name}`
-      );
-      await uploadBytes(fileRef, file);
+  //   try {
+  //     // 1️⃣ Storage にファイルをアップロード
+  //     const storage = getStorage();
+  //     const fileRef = ref(
+  //       storage,
+  //       `receipts/${student.studentId}/${Date.now()}_${file.name}`,
+  //     );
+  //     await uploadBytes(fileRef, file);
 
-      // 2️⃣ URLを取得
-      const url = await getDownloadURL(fileRef);
+  //     // 2️⃣ URLを取得
+  //     const url = await getDownloadURL(fileRef);
 
-      // 3️⃣ Firestoreに支払い情報を追加
-      const paymentsRef = collection(db, "payments");
-      const paymentPayload = {
-        studentId: student.studentId,
-        course: student.courseId || "未設定",
-        receiptUrl: url,
-        amount: numericAmount, // 入力金額
-        paymentMethod: "銀行振込", // 支払い方法（例）
-        status: "支払い済み", // 支払い状態
-        createdAt: serverTimestamp(), // 支払った日時（自動）
-      };
+  //     // 3️⃣ Firestoreに支払い情報を追加
+  //     const paymentsRef = collection(db, "payments");
+  //     const paymentPayload = {
+  //       studentId: student.studentId,
+  //       course: student.courseId || "未設定",
+  //       receiptUrl: url,
+  //       amount: numericAmount, // 入力金額
+  //       paymentMethod: "銀行振込", // 支払い方法（例）
+  //       status: "支払い済み", // 支払い状態
+  //       createdAt: serverTimestamp(), // 支払った日時（自動）
+  //     };
 
-      const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
+  //     const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
 
-      // 追加フィールド: paymentId, uploadedAt, verified, month
-      const monthValue =
-        student.startMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
-      await updateDoc(doc(db, "payments", paymentDocRef.id), {
-        paymentId: paymentDocRef.id,
-        uploadedAt: serverTimestamp(),
-        verified: false,
-        month: monthValue,
-      });
+  //     // 追加フィールド: paymentId, uploadedAt, verified, month
+  //     const monthValue =
+  //       student.startMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
+  //     await updateDoc(doc(db, "payments", paymentDocRef.id), {
+  //       paymentId: paymentDocRef.id,
+  //       uploadedAt: serverTimestamp(),
+  //       verified: false,
+  //       month: monthValue,
+  //     });
 
-      alert("支払い情報を保存しました！");
-      setFile(null);
-      setAmount("");
-    } catch (err) {
-      console.error("アップロードエラー:", err);
-      alert("アップロードに失敗しました。");
-    } finally {
-      setUploading(false);
-    }
-  };
+  //     alert("支払い情報を保存しました！");
+  //     setFile(null);
+  //     setAmount("");
+  //   } catch (err) {
+  //     console.error("アップロードエラー:", err);
+  //     alert("アップロードに失敗しました。");
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
 
   // 🔹 ログイン中の学生情報をFirestoreからリアルタイム取得
+  <StudentAutoRegister/>
   useEffect(() => {
     if (status !== "authenticated") {
       setLoading(false);
@@ -126,7 +129,7 @@ export default function StudentDashboardPage() {
         console.error("Student snapshot error:", err);
         setStudent(null);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsub();
@@ -231,11 +234,38 @@ export default function StudentDashboardPage() {
     // courses if needed so new courses don't require manual changes.
     const saveStudentWithAutoCourse = async (studentId, email, extra = {}) => {
       const courseKey = await determineCourseKey(studentId, email);
-
       const studentRef = doc(db, "students", studentId);
       const snap = await getDoc(studentRef);
 
       if (!snap.exists()) {
+        // compute entrance year and grade labels (EN/JP) based on studentId
+        const yearCode = parseInt(String(studentId).slice(1, 3), 10);
+        const currentYear = new Date().getFullYear();
+        let entranceYear = 2000 + (Number.isFinite(yearCode) ? yearCode : 0);
+        if (entranceYear > currentYear) entranceYear -= 100;
+        const gradeNum = currentYear - entranceYear + 1;
+        const gradeMapJP = {
+          1: "1年生",
+          2: "2年生",
+          3: "3年生",
+          4: "4年生",
+        };
+        const gradeJP = gradeMapJP[gradeNum] || `${gradeNum}年生`;
+        const ordinal = (n) => {
+          if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
+          switch (n % 10) {
+            case 1:
+              return `${n}st`;
+            case 2:
+              return `${n}nd`;
+            case 3:
+              return `${n}rd`;
+            default:
+              return `${n}th`;
+          }
+        };
+        const gradeEN = `${ordinal(gradeNum)} Year`;
+
         // merge payload with any extra fields passed in
         const payload = {
           studentId,
@@ -243,40 +273,104 @@ export default function StudentDashboardPage() {
           name: session.user?.name || "未設定",
           nameKana: "",
           courseId: courseKey, // students stores courseKey now
+          courseKey,
           startMonth: new Date().toISOString().slice(0, 7),
+          entranceYear,
+          grade: gradeEN,
+          gradeJP,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           ...extra,
         };
 
-        await setDoc(studentRef, payload);
-
-        // If we resolved a real courseKey, try to increment that course's students count
+        // We'll perform the student create + course increment inside a transaction
+        // to avoid race conditions where two parallel registrations cause
+        // double-increment.
+        // First resolve the best-matching courseDocId (if any)
+        let resolvedCourseDocId = null;
         if (courseKey && courseKey !== "unknown") {
           try {
-            const q = query(
-              collection(db, "courses"),
-              where("courseKey", "==", courseKey),
-              limit(1)
-            );
-            const qsnap = await getDocs(q);
-            if (!qsnap.empty) {
-              const courseDocId = qsnap.docs[0].id;
-              await updateDoc(doc(db, "courses", courseDocId), {
+            let qsnap = null;
+            try {
+              qsnap = await getDocs(
+                query(
+                  collection(db, "courses"),
+                  where("courseKey", "==", courseKey),
+                  where("year", "==", gradeEN),
+                  limit(1),
+                ),
+              );
+            } catch (e) {
+              qsnap = null;
+            }
+
+            if ((!qsnap || qsnap.empty) && gradeJP) {
+              try {
+                qsnap = await getDocs(
+                  query(
+                    collection(db, "courses"),
+                    where("courseKey", "==", courseKey),
+                    where("year", "==", gradeJP),
+                    limit(1),
+                  ),
+                );
+              } catch (e) {
+                qsnap = null;
+              }
+            }
+
+            if (!qsnap || qsnap.empty) {
+              qsnap = await getDocs(
+                query(
+                  collection(db, "courses"),
+                  where("courseKey", "==", courseKey),
+                  limit(1),
+                ),
+              );
+            }
+
+            if (qsnap && !qsnap.empty) {
+              resolvedCourseDocId = qsnap.docs[0].id;
+            }
+          } catch (err) {
+            console.warn("Failed to resolve course doc for increment:", err);
+          }
+        }
+
+        try {
+          await runTransaction(db, async (transaction) => {
+            const sSnap = await transaction.get(studentRef);
+            if (sSnap.exists()) return; // someone created it concurrently
+
+            // include courseDocId in payload for future moves
+            const payloadWithDoc = {
+              ...payload,
+              courseDocId: resolvedCourseDocId,
+            };
+            transaction.set(studentRef, payloadWithDoc);
+
+            if (resolvedCourseDocId) {
+              const courseDocRef = doc(db, "courses", resolvedCourseDocId);
+              transaction.update(courseDocRef, {
                 students: increment(1),
                 updatedAt: serverTimestamp(),
               });
             }
-          } catch (err) {
-            console.warn("Failed to increment students for course:", err);
-          }
+          });
+        } catch (err) {
+          console.warn(
+            "Transaction failed for student create + increment:",
+            err,
+          );
         }
 
         console.log(
           "✅ 新しい学生を登録しました:",
           studentId,
           "courseKey:",
-          courseKey
+          courseKey,
+          "grade:",
+          gradeEN,
         );
       }
     };
@@ -297,7 +391,7 @@ export default function StudentDashboardPage() {
   // Combine courseId and totalFees into a single stable dependency so the
   // dependency array length never changes between renders (avoids HMR warning).
   const _courseKeyAndFees = `${student?.courseId ?? ""}::${String(
-    student?.totalFees ?? ""
+    student?.totalFees ?? "",
   )}`;
 
   useEffect(() => {
@@ -365,7 +459,9 @@ export default function StudentDashboardPage() {
             collection(db, "courses"),
             where("courseKey", "==", student.courseId),
             where("year", "==", studentYearJP),
+
             limit(1)
+
           );
           qsnap = await getDocs(qpref2);
         }
@@ -375,7 +471,9 @@ export default function StudentDashboardPage() {
           const q = query(
             collection(db, "courses"),
             where("courseKey", "==", student.courseId),
+
             limit(1)
+
           );
           qsnap = await getDocs(q);
         }
@@ -407,7 +505,7 @@ export default function StudentDashboardPage() {
               collection(db, "courses"),
               where("courseKey", ">=", student.courseId),
               where("courseKey", "<=", student.courseId + "\uf8ff"),
-              limit(1)
+              limit(1),
             );
             const qsnap2 = await getDocs(q2);
             if (!qsnap2.empty) {
@@ -448,7 +546,7 @@ export default function StudentDashboardPage() {
                 const q3 = query(
                   collection(db, "courses"),
                   where("name", "==", name),
-                  limit(1)
+                  limit(1),
                 );
                 const snap3 = await getDocs(q3);
                 if (!snap3.empty) {
@@ -507,7 +605,7 @@ export default function StudentDashboardPage() {
     const q = query(
       paymentsRef,
       where("studentId", "==", student.studentId),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
     );
 
     const unsub = onSnapshot(
@@ -526,10 +624,10 @@ export default function StudentDashboardPage() {
         if (err && err.message) {
           console.warn(
             "Firestore index required or query failed:",
-            err.message
+            err.message,
           );
         }
-      }
+      },
     );
 
     return () => unsub();
@@ -545,7 +643,7 @@ export default function StudentDashboardPage() {
     const q = query(
       paymentsRef,
       where("studentId", "==", student.studentId),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
     );
 
     const unsub = onSnapshot(
@@ -564,10 +662,10 @@ export default function StudentDashboardPage() {
         if (err && err.message) {
           console.warn(
             "Firestore index required or query failed:",
-            err.message
+            err.message,
           );
         }
-      }
+      },
     );
 
     return () => unsub();
@@ -601,13 +699,13 @@ export default function StudentDashboardPage() {
       computedTuition ??
       courseTuition ??
       student?.totalFees ??
-      0
+      0,
   );
 
   // paid: sum of payments amounts from Firestore (real-time)
   const paidFromPayments = payments.reduce(
     (sum, p) => sum + (Number(p.amount) || 0),
-    0
+    0,
   );
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
 
@@ -661,7 +759,9 @@ export default function StudentDashboardPage() {
     session.user.courseName ??
     "未設定";
   const hasJapanese = /[\u3040-\u30ff\u4e00-\u9faf]/.test(
+
     String(rawCourseName)
+
   );
   let courseDisplayName = rawCourseName;
   if (hasJapanese) {
@@ -688,7 +788,7 @@ export default function StudentDashboardPage() {
           }`}
           onClick={() => setActiveTab("history")}
         >
-          履歴
+          毎月の支払い
         </button>
         <button
           className={`${styles.tab} ${
@@ -744,18 +844,11 @@ export default function StudentDashboardPage() {
       {/* 🔹 履歴タブ */}
       {activeTab === "history" && (
         <section className={styles.card}>
-          <h2 className={styles.title}>支払い履歴</h2>
+          {/* <h2 className={styles.title}>支払い履歴</h2> */}
+          <PaymentSchedule student={student} courseInfo={courseInfo} payments={payments} />
 
           <table className={styles.paymentTable}>
-            <thead>
-              <tr>
-                <th>日付</th>
-                <th>時間</th>
-                <th>金額</th>
-                <th>状態</th>
-                <th>詳細</th>
-              </tr>
-            </thead>
+           
             <tbody>
               {payments.map((p) => {
                 const date = p.createdAt?.toDate

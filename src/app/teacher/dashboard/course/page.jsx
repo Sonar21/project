@@ -13,7 +13,7 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
-  increment ,
+  increment,
 } from "firebase/firestore";
 
 import "./page.css";
@@ -29,45 +29,130 @@ export default function CoursesPage() {
   });
   const [activeYear, setActiveYear] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
 
   // ✅ Firestoreからコースをリアルタイム取得
- useEffect(() => {
-  const coursesRef = collection(db, "courses");
+  useEffect(() => {
+    const coursesRef = collection(db, "courses");
 
-  const unsubscribe = onSnapshot(coursesRef, async (snapshot) => {
-    try {
-      const fetchedCourses = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const courseData = { id: docSnap.id, ...docSnap.data() };
+    const unsubscribe = onSnapshot(coursesRef, async (snapshot) => {
+      try {
+        const fetchedCourses = await Promise.all(
+          snapshot.docs.map(async (docSnap) => {
+            const courseData = { id: docSnap.id, ...docSnap.data() };
 
-          try {
-            // Count students who have courseId equal to this course id
-            const studentsRef = collection(db, "students");
-            const q = query(studentsRef, where("courseId", "==", docSnap.id));
-            const countSnap = await getCountFromServer(q);
-            const studentCount = countSnap.data()?.count ?? 0;
+            try {
+              // If the course document already contains a `students` field (kept
+              // in sync by registration logic), prefer that value — it's the
+              // authoritative, per-course (per-doc) count and avoids ambiguity
+              // when multiple course documents share the same courseKey.
+              if (typeof courseData.students === "number") {
+                return { ...courseData, students: courseData.students };
+              }
 
-            return { ...courseData, students: studentCount };
-          } catch (err) {
-            console.error("count error for course", docSnap.id, err);
-            // fallback to stored field
-            return { ...courseData, students: courseData.students ?? 0 };
-          }
-        })
-      );
+              // Otherwise, fall back to counting students documents. Note:
+              // students.collection may store courseId as the short `courseKey`
+              // or the course document ID, so check both and sum.
+              const studentsRef = collection(db, "students");
+              const courseKey = courseData.courseKey || null;
+              const docId = docSnap.id;
 
-      setCourses(fetchedCourses);
-    } catch (err) {
-      console.error("Error processing courses snapshot", err);
-    }
-  });
+              let total = 0;
 
-  return () => unsubscribe();
-}, []);
+              if (courseKey) {
+                // Count only students whose courseId matches the courseKey AND
+                // whose grade/year matches the course document's year. This
+                // prevents counting the same students into multiple course
+                // documents that share the same courseKey but represent
+                // different years (1st/2nd).
+                try {
+                  // Try counting by the normalized English grade field first
+                  const qGradeEN = query(
+                    studentsRef,
+                    where("courseId", "==", courseKey),
+                    where("gradeEN", "==", courseData.year)
+                  );
+                  const snapGradeEN = await getCountFromServer(qGradeEN);
+                  total += snapGradeEN.data()?.count ?? 0;
+                } catch (e) {
+                  // if the composite index is missing or the field isn't present,
+                  // fall back to other grade fields separately
+                  try {
+                    const qGrade = query(
+                      studentsRef,
+                      where("courseId", "==", courseKey),
+                      where("grade", "==", courseData.year)
+                    );
+                    const snapGrade = await getCountFromServer(qGrade);
+                    total += snapGrade.data()?.count ?? 0;
+                  } catch (e2) {
+                    try {
+                      const qGradeJP = query(
+                        studentsRef,
+                        where("courseId", "==", courseKey),
+                        where("gradeJP", "==", courseData.year)
+                      );
+                      const snapGradeJP = await getCountFromServer(qGradeJP);
+                      total += snapGradeJP.data()?.count ?? 0;
+                    } catch (e3) {
+                      // As a final fallback (least preferred), do NOT count by
+                      // courseKey alone because it causes duplicates across
+                      // course documents sharing the same courseKey.
+                      console.info(
+                        "count fallback: could not perform grade-filtered count for",
+                        courseKey,
+                        courseData.year
+                      );
+                    }
+                  }
+                }
+              }
 
+              // Some student documents store the canonical course document id
+              // under the `courseDocId` field (migration or admin scripts).
+              // Count those as well so we don't miss students that aren't
+              // recorded in `courseId`.
+              try {
+                const qByDocIdField = query(
+                  studentsRef,
+                  where("courseDocId", "==", docId)
+                );
+                const snapByDocIdField = await getCountFromServer(
+                  qByDocIdField
+                );
+                total += snapByDocIdField.data()?.count ?? 0;
+              } catch (e) {
+                // ignore per-course counting failures; we already have fallback
+                console.warn(
+                  "count error for courseDocId field",
+                  docSnap.id,
+                  e
+                );
+              }
 
-    
+              if (!courseKey || courseKey !== docId) {
+                const qId = query(studentsRef, where("courseId", "==", docId));
+                const snapId = await getCountFromServer(qId);
+                total += snapId.data()?.count ?? 0;
+              }
+
+              return { ...courseData, students: total };
+            } catch (err) {
+              console.error("count error for course", docSnap.id, err);
+              // fallback to stored field if present, else zero
+              return { ...courseData, students: courseData.students ?? 0 };
+            }
+          })
+        );
+
+        setCourses(fetchedCourses);
+      } catch (err) {
+        console.error("Error processing courses snapshot", err);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // ✅ 日本語・英語どちらでも courseKey を自動判定する関数
   const determineCourseKey = (courseName = "") => {
     const name = courseName
@@ -94,7 +179,6 @@ export default function CoursesPage() {
     // fallback（英語スラッグ化）
     return name.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   };
-
 
   // ✅ 新しいコースを追加
   const handleAddCourse = async () => {
@@ -214,24 +298,21 @@ export default function CoursesPage() {
               <td>{index + 1}</td>
               <td>
                 {/* {c.nameJa && c.nameEn
-                  ? `${c.nameJa} / ${c.nameEn}`
-                  : c.name || c.nameJa || c.nameEn || c.courseKey || c.id} */}
-                  <Link
-                    href={`/teacher/dashboard/course/${c.courseKey ?? c.id}`}
-                    className="course-link"
-                  >
-                    {c.nameJa && c.nameEn
-                      ? `${c.nameJa} / ${c.nameEn}`
-                      : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
- 　　　　　　　　　 </Link>   
+    ? ${c.nameJa} / ${c.nameEn}
+    : c.name || c.nameJa || c.nameEn || c.courseKey || c.id} */}
+                <Link href={`/teacher/dashboard/course/${c.id}`} className="course-link">
+                  {c.nameJa && c.nameEn
+                    ? `${c.nameJa} / ${c.nameEn}`
+                    : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
+                </Link>
               </td>
               <td>{c.fee}</td>
               <td>{c.students ?? 0}</td>
               <td>{c.year}</td>
               <td>
                 <Link
-// href={`/teacher/dashboard/course/${c.courseKey ?? c.id}/edit`}
-href={`/teacher/dashboard/course/${c.id}/edit`}
+                  // href={`/teacher/dashboard/course/${c.courseKey ?? c.id}/edit`}
+                  href={`/teacher/dashboard/course/${c.id}/edit`}
                   className="view-btn"
                 >
                   Edit
@@ -242,7 +323,6 @@ href={`/teacher/dashboard/course/${c.id}/edit`}
                 >
                   Delete
                 </button>
-                
               </td>
             </tr>
           ))}
@@ -262,13 +342,21 @@ href={`/teacher/dashboard/course/${c.id}/edit`}
                 setNewCourse({ ...newCourse, name: e.target.value })
               }
             />
-           
+
             <input
               type="text"
               placeholder="Fee (e.g. ¥900,000)"
               value={newCourse.fee}
               onChange={(e) =>
                 setNewCourse({ ...newCourse, fee: e.target.value })
+              }
+            />
+             <input
+              type="text"
+              placeholder="permonth (e.g. ¥80000)"
+              value={newCourse.permonth}
+              onChange={(e) =>
+                setNewCourse({ ...newCourse, permonth: e.target.value })
               }
             />
             <select

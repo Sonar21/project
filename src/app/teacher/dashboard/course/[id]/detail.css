@@ -37,15 +37,15 @@
 }
 
 .status.success {
-  background-color: #4CAF50;
+  background-color: #4caf50;
 }
 
 .status.partial {
-  background-color: #FFC107;
+  background-color: #ffc107;
 }
 
 .status.pending {
-  background-color: #F44336;
+  background-color: #f44336;
 }
 
 .view-btn {

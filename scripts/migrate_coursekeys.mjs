@@ -120,7 +120,7 @@ async function main() {
         .doc(courseDocId)
         .update({ students: cnt });
       console.log(
-        `Updated students=${cnt} for course ${courseDocId} (key=${key})`
+        `Updated students=${cnt} for course ${courseDocId} (key=${key})`,
       );
     }
   }
