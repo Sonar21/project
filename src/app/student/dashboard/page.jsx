@@ -21,11 +21,11 @@ import {
   increment,
   runTransaction,
 } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage } from "@/firebase/firebase";
 import styles from "./page.module.css";
+import Image from "next/image";
 import PaymentSchedule from "@/components/PaymentSchedule";
-
 export default function StudentDashboardPage() {
   const { data: session, status } = useSession();
   const [student, setStudent] = useState(null);
@@ -36,69 +36,116 @@ export default function StudentDashboardPage() {
   const [activeTab, setActiveTab] = useState("overview"); // タブ状態
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [amount, setAmount] = useState("");
+  const [receiptMonth, setReceiptMonth] = useState("");
   const [payments, setPayments] = useState([]); // 🔹 支払い履歴を保存する配列
 
   // 📸 レシートアップロード関数（支払い情報を記録）
-  // const handleReceiptUpload = async () => {
-  //   if (!file || !student) return alert("ファイルを選択してください。");
+  const handleReceiptUpload = async (targetMonth) => {
+    if (!file || !student) return alert("ファイルを選択してください。");
 
-  //   // 金額チェック
-  //   const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
-  //   if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
-  //     return alert("有効な金額を入力してください（例: 80000）");
-  //   }
-  //   setUploading(true);
+    // 金額チェック
+    const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
+    if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
+      return alert("有効な金額を入力してください（例: 80000）");
+    }
+    setUploading(true);
+    setUploadProgress(0);
 
-  //   try {
-  //     // 1️⃣ Storage にファイルをアップロード
-  //     const storage = getStorage();
-  //     const fileRef = ref(
-  //       storage,
-  //       `receipts/${student.studentId}/${Date.now()}_${file.name}`,
-  //     );
-  //     await uploadBytes(fileRef, file);
+    try {
+      // (オプション) クライアント側で画像をリサイズして容量を下げる
+      const compressImage = async (
+        inputFile,
+        maxWidth = 1200,
+        quality = 0.8
+      ) => {
+        try {
+          // createImageBitmap は速くてメモリ効率が良い（対応ブラウザで）
+          const bitmap = await createImageBitmap(inputFile);
+          const scale = Math.min(1, maxWidth / bitmap.width);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(bitmap.width * scale);
+          canvas.height = Math.round(bitmap.height * scale);
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          return await new Promise((resolve) =>
+            canvas.toBlob(resolve, "image/jpeg", quality)
+          );
+        } catch (e) {
+          // フォールバック: そのまま返す
+          return inputFile;
+        }
+      };
 
-  //     // 2️⃣ URLを取得
-  //     const url = await getDownloadURL(fileRef);
+      let uploadFile = file;
+      try {
+        const compressed = await compressImage(file, 1200, 0.8);
+        if (compressed && compressed.size && compressed.size < file.size) {
+          // compressed is a Blob; convert to File to keep original name if possible
+          uploadFile = new File(
+            [compressed],
+            file.name.replace(/\.[^.]+$/, ".jpg"),
+            { type: compressed.type }
+          );
+        }
+      } catch (e) {
+        console.warn("画像圧縮に失敗しました。元のファイルを使用します。", e);
+        uploadFile = file;
+      }
 
-  //     // 3️⃣ Firestoreに支払い情報を追加
-  //     const paymentsRef = collection(db, "payments");
-  //     const paymentPayload = {
-  //       studentId: student.studentId,
-  //       course: student.courseId || "未設定",
-  //       receiptUrl: url,
-  //       amount: numericAmount, // 入力金額
-  //       paymentMethod: "銀行振込", // 支払い方法（例）
-  //       status: "支払い済み", // 支払い状態
-  //       createdAt: serverTimestamp(), // 支払った日時（自動）
-  //     };
+      // 1️⃣ クライアント側で Base64 に変換して Firestore に保存 (Storage を使わない)
+      const toBase64 = (f) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = (err) => reject(err);
+          reader.readAsDataURL(f);
+        });
 
-  //     const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
+      // convert uploadFile (File) to base64 data URL
+      const base64Data = await toBase64(uploadFile);
 
-  //     // 追加フィールド: paymentId, uploadedAt, verified, month
-  //     const monthValue =
-  //       student.startMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
-  //     await updateDoc(doc(db, "payments", paymentDocRef.id), {
-  //       paymentId: paymentDocRef.id,
-  //       uploadedAt: serverTimestamp(),
-  //       verified: false,
-  //       month: monthValue,
-  //     });
+      const paymentsRef = collection(db, "payments");
+      const monthValue =
+        targetMonth ||
+        student.startMonth ||
+        new Date().toISOString().slice(0, 7); // YYYY-MM
 
-  //     alert("支払い情報を保存しました！");
-  //     setFile(null);
-  //     setAmount("");
-  //   } catch (err) {
-  //     console.error("アップロードエラー:", err);
-  //     alert("アップロードに失敗しました。");
-  //   } finally {
-  //     setUploading(false);
-  //   }
-  // };
+      const paymentPayload = {
+        studentId: student.studentId,
+        course: student.courseId || "未設定",
+        receiptBase64: base64Data,
+        amount: numericAmount, // 入力金額
+        paymentMethod: "銀行振込",
+        status: "支払い済み",
+        createdAt: serverTimestamp(),
+        uploadedAt: serverTimestamp(),
+        verified: false,
+        month: monthValue,
+      };
+
+      const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
+
+      // 追加入力: paymentId をセット
+      await updateDoc(doc(db, "payments", paymentDocRef.id), {
+        paymentId: paymentDocRef.id,
+      });
+
+      alert("支払い情報を保存しました！");
+      setFile(null);
+      setAmount("");
+      setUploadProgress(0);
+    } catch (err) {
+      console.error("アップロードエラー:", err);
+      alert("アップロードに失敗しました。");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // 🔹 ログイン中の学生情報をFirestoreからリアルタイム取得
-  <StudentAutoRegister/>
+  <StudentAutoRegister />;
   useEffect(() => {
     if (status !== "authenticated") {
       setLoading(false);
@@ -129,7 +176,7 @@ export default function StudentDashboardPage() {
         console.error("Student snapshot error:", err);
         setStudent(null);
         setLoading(false);
-      },
+      }
     );
 
     return () => unsub();
@@ -297,8 +344,8 @@ export default function StudentDashboardPage() {
                   collection(db, "courses"),
                   where("courseKey", "==", courseKey),
                   where("year", "==", gradeEN),
-                  limit(1),
-                ),
+                  limit(1)
+                )
               );
             } catch (e) {
               qsnap = null;
@@ -311,8 +358,8 @@ export default function StudentDashboardPage() {
                     collection(db, "courses"),
                     where("courseKey", "==", courseKey),
                     where("year", "==", gradeJP),
-                    limit(1),
-                  ),
+                    limit(1)
+                  )
                 );
               } catch (e) {
                 qsnap = null;
@@ -324,8 +371,8 @@ export default function StudentDashboardPage() {
                 query(
                   collection(db, "courses"),
                   where("courseKey", "==", courseKey),
-                  limit(1),
-                ),
+                  limit(1)
+                )
               );
             }
 
@@ -360,7 +407,7 @@ export default function StudentDashboardPage() {
         } catch (err) {
           console.warn(
             "Transaction failed for student create + increment:",
-            err,
+            err
           );
         }
 
@@ -370,7 +417,7 @@ export default function StudentDashboardPage() {
           "courseKey:",
           courseKey,
           "grade:",
-          gradeEN,
+          gradeEN
         );
       }
     };
@@ -391,7 +438,7 @@ export default function StudentDashboardPage() {
   // Combine courseId and totalFees into a single stable dependency so the
   // dependency array length never changes between renders (avoids HMR warning).
   const _courseKeyAndFees = `${student?.courseId ?? ""}::${String(
-    student?.totalFees ?? "",
+    student?.totalFees ?? ""
   )}`;
 
   useEffect(() => {
@@ -461,7 +508,6 @@ export default function StudentDashboardPage() {
             where("year", "==", studentYearJP),
 
             limit(1)
-
           );
           qsnap = await getDocs(qpref2);
         }
@@ -473,7 +519,6 @@ export default function StudentDashboardPage() {
             where("courseKey", "==", student.courseId),
 
             limit(1)
-
           );
           qsnap = await getDocs(q);
         }
@@ -505,7 +550,7 @@ export default function StudentDashboardPage() {
               collection(db, "courses"),
               where("courseKey", ">=", student.courseId),
               where("courseKey", "<=", student.courseId + "\uf8ff"),
-              limit(1),
+              limit(1)
             );
             const qsnap2 = await getDocs(q2);
             if (!qsnap2.empty) {
@@ -546,7 +591,7 @@ export default function StudentDashboardPage() {
                 const q3 = query(
                   collection(db, "courses"),
                   where("name", "==", name),
-                  limit(1),
+                  limit(1)
                 );
                 const snap3 = await getDocs(q3);
                 if (!snap3.empty) {
@@ -605,7 +650,7 @@ export default function StudentDashboardPage() {
     const q = query(
       paymentsRef,
       where("studentId", "==", student.studentId),
-      orderBy("createdAt", "desc"),
+      orderBy("createdAt", "desc")
     );
 
     const unsub = onSnapshot(
@@ -624,10 +669,10 @@ export default function StudentDashboardPage() {
         if (err && err.message) {
           console.warn(
             "Firestore index required or query failed:",
-            err.message,
+            err.message
           );
         }
-      },
+      }
     );
 
     return () => unsub();
@@ -643,7 +688,7 @@ export default function StudentDashboardPage() {
     const q = query(
       paymentsRef,
       where("studentId", "==", student.studentId),
-      orderBy("createdAt", "desc"),
+      orderBy("createdAt", "desc")
     );
 
     const unsub = onSnapshot(
@@ -662,10 +707,10 @@ export default function StudentDashboardPage() {
         if (err && err.message) {
           console.warn(
             "Firestore index required or query failed:",
-            err.message,
+            err.message
           );
         }
-      },
+      }
     );
 
     return () => unsub();
@@ -692,6 +737,9 @@ export default function StudentDashboardPage() {
   }
 
   // 🔹 支払い状況計算
+  {
+    uploading && <div style={{ marginTop: 6 }}>進捗: {uploadProgress}%</div>;
+  }
   // total: prefer courseInfo.pricePerMonth, then computedTuition, courseTuition, student.totalFees
   const total = Number(
     courseInfo?.totalFee ??
@@ -699,13 +747,13 @@ export default function StudentDashboardPage() {
       computedTuition ??
       courseTuition ??
       student?.totalFees ??
-      0,
+      0
   );
 
   // paid: sum of payments amounts from Firestore (real-time)
   const paidFromPayments = payments.reduce(
     (sum, p) => sum + (Number(p.amount) || 0),
-    0,
+    0
   );
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
 
@@ -759,9 +807,7 @@ export default function StudentDashboardPage() {
     session.user.courseName ??
     "未設定";
   const hasJapanese = /[\u3040-\u30ff\u4e00-\u9faf]/.test(
-
     String(rawCourseName)
-
   );
   let courseDisplayName = rawCourseName;
   if (hasJapanese) {
@@ -789,6 +835,14 @@ export default function StudentDashboardPage() {
           onClick={() => setActiveTab("history")}
         >
           毎月の支払い
+        </button>
+        <button
+          className={`${styles.tab} ${
+            activeTab === "profile" ? styles.active : ""
+          }`}
+          onClick={() => setActiveTab("profile")}
+        >
+          レシートをアップロード
         </button>
         <button
           className={`${styles.tab} ${
@@ -845,10 +899,13 @@ export default function StudentDashboardPage() {
       {activeTab === "history" && (
         <section className={styles.card}>
           {/* <h2 className={styles.title}>支払い履歴</h2> */}
-          <PaymentSchedule student={student} courseInfo={courseInfo} payments={payments} />
+          <PaymentSchedule
+            student={student}
+            courseInfo={courseInfo}
+            payments={payments}
+          />
 
           <table className={styles.paymentTable}>
-           
             <tbody>
               {payments.map((p) => {
                 const date = p.createdAt?.toDate
@@ -876,18 +933,40 @@ export default function StudentDashboardPage() {
                       >
                         {p.status}
                       </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setFile(e.target.files[0])}
-                      />{" "}
-                      <button
-                        onClick={handleReceiptUpload}
-                        disabled={uploading}
-                      >
-                        {" "}
-                        {uploading ? "アップロード中..." : "アップロード"}{" "}
-                      </button>
+
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ fontSize: 12, color: "#333" }}>
+                          {p.paymentMethod || "銀行振込"}
+                        </div>
+
+                        <div style={{ marginTop: 8 }}>
+                          {p.receiptBase64 ? (
+                            <img
+                              src={p.receiptBase64}
+                              alt={`receipt-${p.id || "img"}`}
+                              style={{
+                                maxWidth: 240,
+                                height: "auto",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : p.receiptUrl ? (
+                            <Image
+                              src={p.receiptUrl}
+                              alt={`receipt-${p.id || "img"}`}
+                              width={240}
+                              height={180}
+                              unoptimized={true}
+                            />
+                          ) : (
+                            <div className={styles.placeholder}>
+                              <span className={styles.placeholderText}>
+                                No image
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -904,6 +983,64 @@ export default function StudentDashboardPage() {
           <p>名前: {student?.name || session.user.name}</p>
           <p>メール: {session.user.email}</p>
           <p>学籍番号: {student?.studentId || "未登録"}</p>
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 8,
+              borderTop: "1px solid #eee",
+            }}
+          >
+            <h3>レシートをアップロード</h3>
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <label>
+                金額:
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="例: 86000"
+                  style={{ marginLeft: 8 }}
+                />
+              </label>
+
+              <label>
+                対象月:
+                <input
+                  type="month"
+                  value={receiptMonth}
+                  onChange={(e) => setReceiptMonth(e.target.value)}
+                  style={{ marginLeft: 8 }}
+                />
+              </label>
+
+              <label>
+                ファイル:
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFile(e.target.files && e.target.files[0])}
+                  style={{ marginLeft: 8 }}
+                />
+              </label>
+
+              <button
+                onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                disabled={uploading}
+              >
+                {uploading ? "アップロード中..." : "OK"}
+              </button>
+              {uploading && (
+                <div style={{ marginLeft: 8 }}>進捗: {uploadProgress}%</div>
+              )}
+            </div>
+          </div>
         </section>
       )}
     </main>

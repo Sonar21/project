@@ -18,25 +18,25 @@ export default function EditCoursePage() {
   const [loading, setLoading] = useState(true);
 
   // ✅ Fetch course data
-  useEffect(() => {
-    const fetchCourse = async () => {
-      try {
-        const docRef = doc(db, "courses", id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setCourse({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          alert("Course not found");
-          router.push("/teacher/dashboard/course");
+    useEffect(() => {
+      const fetchCourse = async () => {
+        try {
+          const docRef = doc(db, "courses", id);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setCourse({ id: docSnap.id, ...docSnap.data() });
+          } else {
+            alert("Course not found");
+            router.push("/teacher/dashboard/course");
+          }
+        } catch (err) {
+          console.error("Error fetching course:", err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Error fetching course:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) fetchCourse();
-  }, [id]);
+      };
+      if (id) fetchCourse();
+    }, [id, router]);
 
   // ✅ Update course
   const handleUpdate = async () => {
