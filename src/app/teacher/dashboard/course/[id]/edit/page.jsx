@@ -18,25 +18,25 @@ export default function EditCoursePage() {
   const [loading, setLoading] = useState(true);
 
   // ✅ Fetch course data
-  useEffect(() => {
-    const fetchCourse = async () => {
-      try {
-        const docRef = doc(db, "courses", id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setCourse({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          alert("Course not found");
-          router.push("/teacher/dashboard/course");
+    useEffect(() => {
+      const fetchCourse = async () => {
+        try {
+          const docRef = doc(db, "courses", id);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setCourse({ id: docSnap.id, ...docSnap.data() });
+          } else {
+            alert("Course not found");
+            router.push("/teacher/dashboard/course");
+          }
+        } catch (err) {
+          console.error("Error fetching course:", err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Error fetching course:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) fetchCourse();
-  }, [id, router]);
+      };
+      if (id) fetchCourse();
+    }, [id, router]);
 
   // ✅ Update course
   const handleUpdate = async () => {
@@ -47,12 +47,25 @@ export default function EditCoursePage() {
 
     try {
       const docRef = doc(db, "courses", id);
-      await updateDoc(docRef, {
+      // normalize permonth -> numeric pricePerMonth and keep permonth string for display
+      const permonthStr = String(course.permonth || "").trim();
+      const parsed = Number(permonthStr.replace(/[^0-9.-]+/g, "")) || null;
+      const updatePayload = {
         name: course.name,
         fee: course.fee,
         year: course.year,
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (permonthStr !== "") {
+        updatePayload.pricePerMonth = parsed;
+        updatePayload.permonth = permonthStr;
+      } else {
+        // if empty, remove numeric field? we'll set to null
+        updatePayload.pricePerMonth = null;
+        updatePayload.permonth = null;
+      }
+
+      await updateDoc(docRef, updatePayload);
       alert("コース情報を更新しました！");
       router.push("/teacher/dashboard/course");
     } catch (err) {
@@ -111,7 +124,7 @@ export default function EditCoursePage() {
           />
         </div>
 
-        <div className="edit-field"> 
+        <div className="edit-field">
           <label>学年</label>
           <select
             value={course.year || ""}

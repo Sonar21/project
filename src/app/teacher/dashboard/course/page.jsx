@@ -25,6 +25,7 @@ export default function CoursesPage() {
     nameJa: "",
     nameEn: "",
     fee: "",
+    permonth: "",
     year: "1st Year",
   });
   const [activeYear, setActiveYear] = useState("All");
@@ -185,9 +186,10 @@ export default function CoursesPage() {
     if (!newCourse.name || !newCourse.fee || !newCourse.year)
       return alert("Please fill all fields");
 
-    // ¥800,000 → 800000 に変換
+    // 月額が入力されていればそれを優先、なければ学費から算出
+    const priceSource = newCourse.permonth ? newCourse.permonth : newCourse.fee;
     const parsedPrice = Number(
-      String(newCourse.fee).replace(/[^0-9.-]+/g, "") || 0
+      String(priceSource || "").replace(/[^0-9.-]+/g, "") || 0
     );
     // 🔹 日本語でも courseKey 自動判定
     const courseKey = determineCourseKey(newCourse.name);
@@ -223,7 +225,7 @@ export default function CoursesPage() {
       });
 
       // モーダルを閉じてフォームをリセット
-      setNewCourse({ name: "", fee: "", year: "1st Year" });
+      setNewCourse({ name: "", fee: "", permonth: "", year: "1st Year" });
       setIsModalOpen(false);
     } catch (err) {
       console.error("Failed to save course to Firestore:", err);
@@ -287,6 +289,7 @@ export default function CoursesPage() {
             <th>No</th>
             <th>コース名</th>
             <th>学費</th>
+            <th>月額</th>
             <th>学生数</th>
             <th>学年</th>
             <th>Actions</th>
@@ -300,13 +303,23 @@ export default function CoursesPage() {
                 {/* {c.nameJa && c.nameEn
     ? ${c.nameJa} / ${c.nameEn}
     : c.name || c.nameJa || c.nameEn || c.courseKey || c.id} */}
-                <Link href={`/teacher/dashboard/course/${c.id}`} className="course-link">
+                <Link
+                  href={`/teacher/dashboard/course/${c.id}`}
+                  className="course-link"
+                >
                   {c.nameJa && c.nameEn
                     ? `${c.nameJa} / ${c.nameEn}`
                     : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
                 </Link>
               </td>
               <td>{c.fee}</td>
+              <td>
+                {c.pricePerMonth
+                  ? `¥${Number(c.pricePerMonth).toLocaleString()}`
+                  : c.permonth
+                  ? c.permonth
+                  : "-"}
+              </td>
               <td>{c.students ?? 0}</td>
               <td>{c.year}</td>
               <td>
@@ -351,7 +364,7 @@ export default function CoursesPage() {
                 setNewCourse({ ...newCourse, fee: e.target.value })
               }
             />
-             <input
+            <input
               type="text"
               placeholder="permonth (e.g. ¥80000)"
               value={newCourse.permonth}

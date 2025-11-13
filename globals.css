@@ -8,6 +8,127 @@
   padding: 0;
   box-sizing: border-box;
 }
+/* ------------------------------
+   Utility / component styles
+   These classes are provided so inline styles in JSX
+   can be replaced with CSS classes (avoid writing CSS in code).
+   Add more as needed and prefer module CSS for page-scoped rules.
+   ------------------------------ */
+
+/* spacing utilities (small increments used across components) */
+.mt-6 {
+  margin-top: 6px;
+}
+.mt-8 {
+  margin-top: 8px;
+}
+.mt-12 {
+  margin-top: 12px;
+}
+.mt-18 {
+  margin-top: 18px;
+}
+.ml-6 {
+  margin-left: 6px;
+}
+.ml-8 {
+  margin-left: 8px;
+}
+
+/* text utilities */
+.text-sm-muted {
+  font-size: 12px;
+  color: #666666;
+}
+.text-sm-dark {
+  font-size: 12px;
+  color: #333333;
+}
+.text-muted-999 {
+  color: #999999;
+}
+.error-text {
+  color: red;
+  margin-top: 8px;
+}
+
+/* layout helpers */
+.max-width-600 {
+  max-width: 600px;
+}
+.max-w-50pc {
+  max-width: 50%;
+  height: auto;
+}
+.img-responsive {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.center-text {
+  text-align: center;
+}
+
+/* image helpers used for receipts / previews */
+.img-400x300-cover {
+  width: 400px;
+  height: 300px;
+  object-fit: cover;
+  display: block;
+}
+.img-full-cover {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  display: block;
+}
+
+/* progress bar components (width of .progress-fill is set inline for percent) */
+.progress-outer {
+  width: 100%;
+  height: 12px;
+  background: #eef2ff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: #2563eb;
+  width: 0%;
+  transition: width 0.45s ease;
+}
+
+/* receipt list/grid */
+.receipt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.receipt-card {
+  border: 1px solid #eee;
+  padding: 8px;
+  border-radius: 6px;
+  background: #fff;
+}
+.receipt-meta {
+  font-size: 12px;
+  color: #333;
+}
+.receipt-sub {
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+}
+.no-receipt {
+  color: #666;
+}
+
+/* small helpers */
+.hint-small {
+  font-size: 13px;
+  color: #6b7280;
+}
 
 /* 全体のスタイル */
 body {

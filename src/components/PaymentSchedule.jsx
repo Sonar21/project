@@ -55,48 +55,74 @@ export default function PaymentSchedule({
         // Determine year: allow targetYear override, else compute from student.startMonth
         let year = targetYear || determineScheduleYear(student?.startMonth);
 
-        // Determine total fee
-        const total = Number(
-          (courseInfo && (courseInfo.totalFee ?? courseInfo.pricePerMonth)) ||
-            student?.totalFees ||
-            0
-        );
+        // Determine desired per-month dueAmount
+        const teacherMonthly =
+          courseInfo && Number(courseInfo.pricePerMonth)
+            ? Math.max(0, Math.round(Number(courseInfo.pricePerMonth)))
+            : null;
 
-        const base = Math.floor(total / 9);
-        const remainder = total - base * 9;
+        // If teacherMonthly is provided, use it for each month; otherwise distribute total across 9 months
+        let base = 0;
+        let remainder = 0;
+        if (!teacherMonthly) {
+          const total = Number(
+            (courseInfo && (courseInfo.totalFee ?? courseInfo.pricePerMonth)) ||
+              student?.totalFees ||
+              0
+          );
+          base = Math.floor(total / 9);
+          remainder = total - base * 9;
+        }
 
-        // Create documents for months Feb (2) -> Oct (10)
-        const batchPromises = [];
+        // Create or update documents for months Feb (2) -> Oct (10)
+        const createOrUpdatePromises = [];
         const createdMonths = [];
+        const updatedMonths = [];
         for (let m = 2; m <= 10; m++) {
           const monthStr = `${year}-${String(m).padStart(2, "0")}`; // id
-
-          // skip if already exists
-          if (existingIds.has(monthStr)) continue;
 
           // last day of month
           const lastDay = new Date(year, m, 0); // day 0 of next month
           const dueDate = lastDay.toISOString().slice(0, 10); // YYYY-MM-DD
 
-          // distribute remainder to the earliest months
-          const extra = remainder > 0 && m - 2 < remainder ? 1 : 0;
-          const dueAmount = base + extra;
-
-          const payload = {
-            month: monthStr,
-            dueDate,
-            dueAmount,
-            paidAmount: 0,
-            status: "未払い",
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          };
+          // determine desired dueAmount
+          let desiredDue = 0;
+          if (teacherMonthly !== null) desiredDue = teacherMonthly;
+          else {
+            const extra = remainder > 0 && m - 2 < remainder ? 1 : 0;
+            desiredDue = base + extra;
+          }
 
           const docRef = doc(schedulesRef, monthStr);
-          batchPromises.push(setDoc(docRef, payload));
-          createdMonths.push(monthStr);
+
+          if (!existingIds.has(monthStr)) {
+            const payload = {
+              month: monthStr,
+              dueDate,
+              dueAmount: desiredDue,
+              paidAmount: 0,
+              status: "未払い",
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            };
+            createOrUpdatePromises.push(setDoc(docRef, payload));
+            createdMonths.push(monthStr);
+          } else {
+            // existing doc: check if dueAmount differs and update
+            const existingDoc = snap.docs.find((d) => d.id === monthStr);
+            const existingDue = Number(existingDoc?.data()?.dueAmount) || 0;
+            if (existingDue !== desiredDue) {
+              createOrUpdatePromises.push(
+                updateDoc(docRef, {
+                  dueAmount: desiredDue,
+                  updatedAt: serverTimestamp(),
+                })
+              );
+              updatedMonths.push(monthStr);
+            }
+          }
         }
-        await Promise.all(batchPromises);
+        await Promise.all(createOrUpdatePromises);
         if (createdMonths.length > 0) {
           console.info(
             "Created payment schedule months:",
@@ -104,6 +130,12 @@ export default function PaymentSchedule({
           );
         } else {
           console.info("No missing months to create for year", year);
+        }
+        if (updatedMonths.length > 0) {
+          console.info(
+            "Updated existing payment schedule dueAmount for months:",
+            updatedMonths.join(", ")
+          );
         }
       } catch (err) {
         console.warn("Failed to create payment schedules:", err);
@@ -265,19 +297,35 @@ export default function PaymentSchedule({
                   <td className={styles.td}>{s.dueDate}</td>
                   <td className={styles.tdRight}>{s.dueDate}</td>
                   <td className={styles.tdRight}>
-                    <input
-                      type="number"
-                      defaultValue={s.dueAmount}
-                      onBlur={(e) => onDueChange(s.month, e.target.value)}
-                      className={styles.inputAmount}
-                      disabled={!canEditAmounts}
-                      title={
-                        canEditAmounts ? "編集可能" : "先生のみ編集可能です"
-                      }
-                    />
+                    {canEditAmounts ? (
+                      <input
+                        type="number"
+                        defaultValue={s.dueAmount}
+                        onBlur={(e) => onDueChange(s.month, e.target.value)}
+                        className={styles.inputAmount}
+                        disabled={!canEditAmounts}
+                        title={
+                          canEditAmounts ? "編集可能" : "先生のみ編集可能です"
+                        }
+                      />
+                    ) : (
+                      <span className={styles.amountText}>
+                        ¥{Number(s.dueAmount || 0).toLocaleString()}円
+                      </span>
+                    )}
                   </td>
                   <td className={styles.tdCenter}>
-                    <span className={styles.statusText}>{s.status}</span>
+                    <span
+                      className={
+                        s.status === "支払い済み"
+                          ? `${styles.statusText} ${styles.paid}`
+                          : s.status === "一部支払い"
+                          ? `${styles.statusText} ${styles.partial}`
+                          : `${styles.statusText} ${styles.unpaid}`
+                      }
+                    >
+                      {s.status}
+                    </span>
                   </td>
                   <td className={styles.receiptCell}>
                     <ReceiptList payments={relatedPayments} />
