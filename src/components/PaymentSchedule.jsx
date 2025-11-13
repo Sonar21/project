@@ -198,29 +198,74 @@ export default function PaymentSchedule({
     if (!studentId) return;
     if (!schedules || schedules.length === 0) return;
 
-    // Aggregate payments by month string YYYY-MM
-    const paymentsByMonth = {};
-    for (const p of payments || []) {
-      let pm = p.month;
-      if (!pm && p.createdAt && p.createdAt.toDate) {
-        pm = p.createdAt.toDate().toISOString().slice(0, 7);
+    // Build a FIFO list of payments (sorted by createdAt) with remaining amounts
+    const paymentEntries = (payments || [])
+      .map((p) => ({
+        id: p.id || p.receiptUrl || Math.random().toString(36).slice(2),
+        amount: Number(p.amount) || 0,
+        receiptUrl: p.receiptUrl || p.receiptBase64 || null,
+        createdAt:
+          (p.createdAt && p.createdAt.toDate && p.createdAt.toDate()) ||
+          (p.createdAt instanceof Date ? p.createdAt : new Date()),
+        original: p,
+        remaining: Number(p.amount) || 0,
+      }))
+      .sort((a, b) => a.createdAt - b.createdAt);
+
+    // Prepare mapping for each schedule month -> allocated paid amount and related payments
+    const allocation = {};
+    let totalRemaining = paymentEntries.reduce((s, p) => s + p.remaining, 0);
+
+    // Iterate schedules in chronological order and allocate from totalRemaining (FIFO on paymentEntries)
+    for (const s of schedules) {
+      const monthId = s.month;
+      const due = Number(s.dueAmount) || 0;
+      let allocated = 0;
+      const related = [];
+
+      // Keep consuming from paymentEntries in FIFO order
+      while (due - allocated > 0 && paymentEntries.length > 0) {
+        const head = paymentEntries[0];
+        if (!head || head.remaining <= 0) {
+          paymentEntries.shift();
+          continue;
+        }
+        const need = due - allocated;
+        const take = Math.min(need, head.remaining);
+        allocated += take;
+        head.remaining -= take;
+        totalRemaining -= take;
+
+        // Push a reference to the original payment (so ReceiptList can show receipt)
+        related.push({
+          ...head.original,
+          _appliedAmount: take,
+        });
+
+        if (head.remaining <= 0) paymentEntries.shift();
       }
-      if (!pm) continue;
-      paymentsByMonth[pm] =
-        (paymentsByMonth[pm] || 0) + (Number(p.amount) || 0);
+
+      let status = "未払い";
+      if (allocated <= 0) status = "未払い";
+      else if (allocated >= due) status = "支払い済み";
+      else status = "一部支払い";
+
+      allocation[monthId] = {
+        paid: allocated,
+        status,
+        relatedPayments: related,
+      };
     }
 
-    // Update schedule docs if paidAmount or status differ
-    const applyUpdates = async () => {
+    // Apply DB updates and also attach relatedPayments to local schedules for rendering
+    const applyAllocations = async () => {
       try {
+        const updates = [];
         for (const s of schedules) {
-          const month = s.month;
-          const paid = paymentsByMonth[month] || 0;
-          const due = Number(s.dueAmount) || 0;
-          let status = "未払い";
-          if (paid <= 0) status = "未払い";
-          else if (paid >= due) status = "支払い済み";
-          else status = "一部支払い";
+          const monthId = s.month;
+          const mapped = allocation[monthId] || { paid: 0, status: "未払い" };
+          const paid = mapped.paid || 0;
+          const status = mapped.status || "未払い";
 
           const needsUpdate =
             Number(s.paidAmount || 0) !== paid || s.status !== status;
@@ -230,21 +275,43 @@ export default function PaymentSchedule({
               "students",
               studentId,
               "paymentSchedules",
-              month
+              monthId
             );
-            await updateDoc(ref, {
-              paidAmount: paid,
-              status,
-              updatedAt: serverTimestamp(),
-            });
+            updates.push(
+              updateDoc(ref, {
+                paidAmount: paid,
+                status,
+                updatedAt: serverTimestamp(),
+              }).catch((e) => {
+                console.warn(`Failed to update schedule ${monthId}:`, e);
+              })
+            );
           }
         }
+        await Promise.all(updates);
+
+        // Update local schedules with relatedPayments so ReceiptList shows receipts used for each month
+        setSchedules((curr) =>
+          (curr || []).map((s) => {
+            const mapped = allocation[s.month] || {
+              paid: 0,
+              status: "未払い",
+              relatedPayments: [],
+            };
+            return {
+              ...s,
+              paidAmount: mapped.paid || 0,
+              status: mapped.status || "未払い",
+              relatedPayments: mapped.relatedPayments || [],
+            };
+          })
+        );
       } catch (err) {
-        console.warn("Failed to sync payments to schedules:", err);
+        console.warn("Failed to apply allocations:", err);
       }
     };
 
-    applyUpdates();
+    applyAllocations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payments, schedules, studentId]);
 
@@ -284,13 +351,16 @@ export default function PaymentSchedule({
           </thead>
           <tbody>
             {schedules.map((s) => {
-              const relatedPayments = (payments || []).filter((p) => {
-                const pm =
-                  p.month ||
-                  (p.createdAt?.toDate &&
-                    p.createdAt.toDate().toISOString().slice(0, 7));
-                return pm === s.month;
-              });
+              // Use precomputed relatedPayments (from allocation) if available; otherwise fall back to month-based filter
+              const relatedPayments =
+                s.relatedPayments ||
+                (payments || []).filter((p) => {
+                  const pm =
+                    p.month ||
+                    (p.createdAt?.toDate &&
+                      p.createdAt.toDate().toISOString().slice(0, 7));
+                  return pm === s.month;
+                });
 
               return (
                 <tr key={s.id || s.month} className={styles.rowBorder}>
