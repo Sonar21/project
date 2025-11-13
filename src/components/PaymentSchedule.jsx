@@ -315,7 +315,17 @@ export default function PaymentSchedule({
                     )}
                   </td>
                   <td className={styles.tdCenter}>
-                    <span className={styles.statusText}>{s.status}</span>
+                    <span
+                      className={
+                        s.status === "支払い済み"
+                          ? `${styles.statusText} ${styles.paid}`
+                          : s.status === "一部支払い"
+                          ? `${styles.statusText} ${styles.partial}`
+                          : `${styles.statusText} ${styles.unpaid}`
+                      }
+                    >
+                      {s.status}
+                    </span>
                   </td>
                   <td className={styles.receiptCell}>
                     <ReceiptList payments={relatedPayments} />

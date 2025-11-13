@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Image from "next/image";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase/firebase";
 
@@ -66,14 +67,20 @@ export default function ImageUpload() {
       {error && (
         <div style={{ color: "red", marginTop: 8 }}>Error: {error}</div>
       )}
-
       {url && (
         <div style={{ marginTop: 12 }}>
           <div>
             Uploaded URL: <a href={url} target="_blank" rel="noreferrer">{url}</a>
           </div>
           <div style={{ marginTop: 8 }}>
-            <img src={url} alt="uploaded" style={{ maxWidth: "100%", height: "auto" }} />
+            <Image
+              src={url}
+              alt="uploaded"
+              width={600}
+              height={400}
+              style={{ maxWidth: "50%", height: "auto" }}
+              unoptimized
+            />
           </div>
         </div>
       )}

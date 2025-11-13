@@ -1,56 +1,69 @@
 "use client";
 
-import React from "react";
-import Image from "next/image";
+import React, { useState, useEffect } from "react";
 import styles from "./ReceiptList.module.css";
+// import Img from "next.image";
 
 // payments: array of { id, amount, receiptUrl, receiptBase64, createdAt }
 export default function ReceiptList({ payments = [] }) {
+  const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") setSelected(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   if (!payments || payments.length === 0) return <span>-</span>;
 
+  const open = (src) => setSelected(src);
+  const close = () => setSelected(null);
+
   return (
-    <div className={styles.container}>
-      {payments.map((p) => (
-        <div key={p.id || p.receiptUrl} className={styles.item}>
-          <div className={styles.amount}>
-            {p.amount ? `¥${Number(p.amount).toLocaleString()}` : "-"}
-          </div>
-          {p.receiptBase64 ? (
-            // receiptBase64 is a data URL (e.g. data:image/png;base64,...)
-            // Use regular <img> since next/image doesn't accept data URLs reliably.
-            <div>
-              <img
-                src={p.receiptBase64}
-                alt={`receipt-${p.id || "img"}`}
-                className={styles.thumb}
-                style={{ width: 400, height: 300, objectFit: "cover" }}
-              />
-              <div style={{ marginTop: 6 }}>
-                <a href={p.receiptBase64} target="_blank" rel="noreferrer">
-                  画像を新しいタブで開く
-                </a>
-                <div style={{ fontSize: 12, color: "#666" }}>
-                  prefix: {String(p.receiptBase64).slice(0, 30)}… length:{" "}
-                  {String(p.receiptBase64).length}
+    <>
+      <div className={styles.container}>
+        {payments.map((p) => {
+          const src = p.receiptBase64 || p.receiptUrl || null;
+          return (
+            <div key={p.id || p.receiptUrl || Math.random()} className={styles.item}>
+              {src ? (
+                <img
+                  src={src}
+                  alt={`receipt-${p.id || "img"}`}
+                  className={styles.thumb}
+                  onClick={() => open(src)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") open(src);
+                  }}
+                />
+              ) : (
+                <div className={styles.placeholder}>
+                  <span className={styles.placeholderText}>No image</span>
                 </div>
-              </div>
+              )}
+              {/* <div className={styles.meta}>
+                <div className={styles.receiptMeta}>月: {p.month || "-"}</div>
+                <div className={styles.receiptSub}>金額: {p.amount ?? "-"}</div>
+              </div> */}
             </div>
-          ) : p.receiptUrl ? (
-            <Image
-              src={p.receiptUrl}
-              alt={`receipt-${p.id || "img"}`}
-              className={styles.thumb}
-              width={400}
-              height={300}
-              unoptimized={true}
-            />
-          ) : (
-            <div className={styles.placeholder}>
-              <span className={styles.placeholderText}>No image</span>
-            </div>
-          )}
+          );
+        })}
+      </div>
+
+      {selected && (
+        <div className={styles.modal} onClick={close} role="dialog" aria-modal="true">
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.closeBtn} onClick={close} aria-label="閉じる">
+              ×
+            </button>
+            <img src={selected} alt="receipt-large" className={styles.modalImage} />
+          </div>
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 }

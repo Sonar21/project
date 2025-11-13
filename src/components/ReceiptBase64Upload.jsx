@@ -11,6 +11,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "@/firebase/clientApp";
+import Img from "next./image";
 
 /**
  * ReceiptBase64Upload
@@ -183,7 +184,7 @@ export default function ReceiptBase64Upload({ studentId, initialMonth }) {
         <strong>プレビュー</strong>
         <div style={{ marginTop: 8 }}>
           {base64 ? (
-            <img
+            <Img
               src={base64}
               alt="preview"
               style={{ maxWidth: "100%", height: "auto" }}
@@ -221,7 +222,7 @@ export default function ReceiptBase64Upload({ studentId, initialMonth }) {
               <div style={{ marginTop: 8 }}>
                 {p.receiptBase64 ? (
                   // receiptBase64 is a data URL, safe to use as src
-                  <img
+                  <Img
                     src={p.receiptBase64}
                     alt={`receipt-${p.id}`}
                     style={{ width: "100%", height: "auto" }}

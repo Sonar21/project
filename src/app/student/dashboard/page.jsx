@@ -20,11 +20,13 @@ import {
   setDoc,
   increment,
   runTransaction,
+  deleteDoc,
 } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase/firebase";
 import styles from "./page.module.css";
 import Image from "next/image";
+import receiptStyles from "@/components/ReceiptList.module.css";
 import PaymentSchedule from "@/components/PaymentSchedule";
 export default function StudentDashboardPage() {
   const { data: session, status } = useSession();
@@ -40,6 +42,7 @@ export default function StudentDashboardPage() {
   const [amount, setAmount] = useState("");
   const [receiptMonth, setReceiptMonth] = useState("");
   const [payments, setPayments] = useState([]); // 🔹 支払い履歴を保存する配列
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   // 📸 レシートアップロード関数（支払い情報を記録）
   const handleReceiptUpload = async (targetMonth) => {
@@ -143,6 +146,32 @@ export default function StudentDashboardPage() {
       setUploading(false);
     }
   };
+
+  // 支払いレコードを削除するヘルパー
+  const handleDeletePayment = async (paymentId) => {
+    if (!paymentId) return;
+    const ok = confirm("この支払い履歴を削除してもよろしいですか？");
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, "payments", paymentId));
+      // オプティミスティックにローカル状態も更新
+      setPayments((prev) => prev.filter((p) => p.id !== paymentId));
+    } catch (err) {
+      console.error("支払い削除に失敗しました:", err);
+      alert("削除に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  // ライトボックス（画像拡大）
+  const openLightbox = (src) => setLightboxSrc(src);
+  const closeLightbox = () => setLightboxSrc(null);
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") closeLightbox();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // 🔹 ログイン中の学生情報をFirestoreからリアルタイム取得
   <StudentAutoRegister />;
@@ -838,9 +867,9 @@ export default function StudentDashboardPage() {
         </button>
         <button
           className={`${styles.tab} ${
-            activeTab === "profile" ? styles.active : ""
+            activeTab === "upload" ? styles.active : ""
           }`}
-          onClick={() => setActiveTab("profile")}
+          onClick={() => setActiveTab("upload")}
         >
           レシートをアップロード
         </button>
@@ -892,19 +921,6 @@ export default function StudentDashboardPage() {
               </div>
             </article>
           </div>
-        </section>
-      )}
-
-      {/* 🔹 履歴タブ */}
-      {activeTab === "history" && (
-        <section className={styles.card}>
-          {/* <h2 className={styles.title}>支払い履歴</h2> */}
-          <PaymentSchedule
-            student={student}
-            courseInfo={courseInfo}
-            payments={payments}
-          />
-
           <table className={styles.paymentTable}>
             <tbody>
               {payments.map((p) => {
@@ -935,36 +951,43 @@ export default function StudentDashboardPage() {
                       </span>
 
                       <div style={{ marginTop: 8 }}>
-                        <div style={{ fontSize: 12, color: "#333" }}>
-                          {p.paymentMethod || "銀行振込"}
-                        </div>
-
-                        <div style={{ marginTop: 8 }}>
+                        <div
+                          style={{
+                            marginTop: 8,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "flex-end",
+                            gap: 8,
+                          }}
+                        >
                           {p.receiptBase64 ? (
                             <img
                               src={p.receiptBase64}
                               alt={`receipt-${p.id || "img"}`}
-                              style={{
-                                maxWidth: 240,
-                                height: "auto",
-                                objectFit: "cover",
-                              }}
+                              className={receiptStyles.thumb}
+                              onClick={() => openLightbox(p.receiptBase64)}
                             />
                           ) : p.receiptUrl ? (
-                            <Image
+                            <img
                               src={p.receiptUrl}
                               alt={`receipt-${p.id || "img"}`}
-                              width={240}
-                              height={180}
-                              unoptimized={true}
+                              className={receiptStyles.thumb}
+                              onClick={() => openLightbox(p.receiptUrl)}
                             />
                           ) : (
-                            <div className={styles.placeholder}>
-                              <span className={styles.placeholderText}>
+                            <div className={receiptStyles.placeholder}>
+                              <span className={receiptStyles.placeholderText}>
                                 No image
                               </span>
                             </div>
                           )}
+
+                          <button
+                            className={styles.secondaryBtn}
+                            onClick={() => handleDeletePayment(p.id)}
+                          >
+                            削除
+                          </button>
                         </div>
                       </div>
                     </td>
@@ -973,24 +996,62 @@ export default function StudentDashboardPage() {
               })}
             </tbody>
           </table>
+          {/* lightbox modal for clicked image */}
+          {lightboxSrc && (
+            <div
+              className={receiptStyles.modal}
+              onClick={() => setLightboxSrc(null)}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div
+                className={receiptStyles.modalContent}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className={receiptStyles.closeBtn}
+                  onClick={() => setLightboxSrc(null)}
+                  aria-label="閉じる"
+                >
+                  ×
+                </button>
+                {/* use regular img to support data URLs and external URLs */}
+                <img
+                  src={lightboxSrc}
+                  alt="receipt-large"
+                  className={receiptStyles.modalImage}
+                />
+              </div>
+            </div>
+          )}
         </section>
       )}
 
-      {/* 🔹 プロフィールタブ */}
-      {activeTab === "profile" && (
+      {/* 🔹 履歴タブ */}
+      {activeTab === "history" && (
         <section className={styles.card}>
-          <h2>プロフィール情報</h2>
-          <p>名前: {student?.name || session.user.name}</p>
-          <p>メール: {session.user.email}</p>
-          <p>学籍番号: {student?.studentId || "未登録"}</p>
+          {/* <h2 className={styles.title}>支払い履歴</h2> */}
+          <PaymentSchedule
+            student={student}
+            courseInfo={courseInfo}
+            payments={payments}
+          />
+        </section>
+      )}
+
+      {/* 🔹 アップロードタブ */}
+      {activeTab === "upload" && (
+        <section className={styles.card}>
+          <h2>レシートをアップロード</h2>
           <div
             style={{
-              marginTop: 16,
-              paddingTop: 8,
-              borderTop: "1px solid #eee",
+              marginTop: 4,
+              padding: 12,
+              border: "1px solid #eee",
+              borderRadius: 8,
+              background: "#fff",
             }}
           >
-            <h3>レシートをアップロード</h3>
             <div
               style={{
                 display: "flex",
@@ -1040,6 +1101,30 @@ export default function StudentDashboardPage() {
                 <div style={{ marginLeft: 8 }}>進捗: {uploadProgress}%</div>
               )}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* 🔹 プロフィールタブ */}
+      {activeTab === "profile" && (
+        <section className={styles.card}>
+          <h2>プロフィール</h2>
+
+          <div
+            style={{
+              padding: 12,
+              border: "1px solid #eee",
+              borderRadius: 8,
+              background: "#fff",
+            }}
+          >
+            <p style={{ margin: "6px 0" }}>
+              名前: {student?.name || session.user.name}
+            </p>
+            <p style={{ margin: "6px 0" }}>メール: {session.user.email}</p>
+            <p style={{ margin: "6px 0" }}>
+              学籍番号: {student?.studentId || "未登録"}
+            </p>
           </div>
         </section>
       )}
