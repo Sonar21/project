@@ -2,18 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-<<<<<<< HEAD
+
 import { collection, query, where, onSnapshot, doc, deleteDoc } from "firebase/firestore";
-=======
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  doc,
-  deleteDoc,
-} from "firebase/firestore";
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
+
 import { db } from "@/firebase/clientApp";
 import Link from "next/link";
 import "./detail.css";
@@ -28,7 +19,7 @@ export default function CourseDetailPage() {
   useEffect(() => {
     if (!id) return;
 
-<<<<<<< HEAD
+
     const q = query(collection(db, "students"), where("courseId", "==", id));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -37,7 +28,8 @@ export default function CourseDetailPage() {
         ...doc.data(),
       }));
       setStudents(list);
-=======
+    });
+
     // Subscribe to students where courseId == id and where courseDocId == id
     // Merge results and deduplicate by document id so students stored under
     // either field are shown in the course detail.
@@ -60,7 +52,7 @@ export default function CourseDetailPage() {
         map.set(d.id, { id: d.id, ...d.data() });
       });
       setStudents(Array.from(map.values()));
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
+
     });
 
     const unsub2 = onSnapshot(qByCourseDocId, (snapshot) => {
@@ -140,22 +132,16 @@ export default function CourseDetailPage() {
                   </Link>
                 </td>
 
-                {/* Student Name → link to teacher’s student detail */}
-                <td>
-<<<<<<< HEAD
-                 <Link href={`/student/dashboard/${s.studentId}`} className="text-blue-600 hover:underline">
-  {s.name}
-</Link>
-
-=======
-                  <Link
-                    href={`/student/dashboard/${s.studentId}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {s.name}
-                  </Link>
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
-                </td>
+{/* Student Name → link to teacher’s student detail */}
+<td>
+  <Link
+    href={`/student/dashboard/${s.studentId}`}
+    className="text-blue-600 hover:underline"
+  >
+    
+    {s.name}
+  </Link>
+</td>
 
                 <td>{s.email}</td>
                 <td>{s.startMonth || "-"}</td>
@@ -178,12 +164,9 @@ export default function CourseDetailPage() {
                     onClick={() => handleDeleteStudent(s.id)}
                     className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                   >
-<<<<<<< HEAD
-                    🗑️ 削除
-=======
-                    削除
->>>>>>> 6c2c254886802c91ac03a10d9a1e098ed446b083
-                  </button>
+
+  🗑️ 削除
+</button>
                 </td>
               </tr>
             ))

@@ -18,18 +18,16 @@ import {
   getDocs,
   getDoc,
   setDoc,
-  increment,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import styles from "./page.module.css";
 
 export default function StudentDashboardPage() {
   const { data: session, status } = useSession();
-  const { id } = useParams(); // 👈 dynamic student id from URL (/student/dashboard/[id])
+  const { id } = useParams();
 
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [courseTuition, setCourseTuition] = useState(null);
   const [courseInfo, setCourseInfo] = useState(null);
   const [computedTuition, setComputedTuition] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -72,7 +70,7 @@ export default function StudentDashboardPage() {
 
       const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
       const monthValue =
-        student.startMonth || new Date().toISOString().slice(0, 7);
+        student?.startMonth || new Date().toISOString().slice(0, 7);
 
       await updateDoc(doc(db, "payments", paymentDocRef.id), {
         paymentId: paymentDocRef.id,
@@ -113,7 +111,7 @@ export default function StudentDashboardPage() {
     const studentRef = doc(db, "students", String(studentId));
     const unsub = onSnapshot(
       studentRef,
-      async (snap) => {
+      (snap) => {
         if (snap.exists()) {
           setStudent({ ...snap.data(), studentId });
         } else {
@@ -192,7 +190,7 @@ export default function StudentDashboardPage() {
   }, [status, session, id]);
 
   // -----------------------------------------
-  // 🔹 Get course infooo
+  // 🔹 Get course info
   // -----------------------------------------
   useEffect(() => {
     const fetchCourse = async () => {
@@ -274,15 +272,44 @@ export default function StudentDashboardPage() {
   // 🔹 Payment progress
   // -----------------------------------------
   const total = Number(
-    courseInfo?.pricePerMonth ??
-      computedTuition ??
-      courseTuition ??
-      student?.totalFees ??
-      0
+    courseInfo?.pricePerMonth ?? computedTuition ?? student?.totalFees ?? 0
   );
   const paid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const remaining = Math.max(total - paid, 0);
   const progress = total ? Math.min((paid / total) * 100, 100) : 0;
+
+  // -----------------------------------------
+  // 🔹 Course name map & student year (safe)
+  // -----------------------------------------
+  const courseNameMap = {
+    japanese: "日本語ビジネスコース",
+    kokusai: "国際ビジネスコース",
+    it: "ITエンジニアコース",
+    web: "Webプログラミングコース",
+    global: "グローバルビジネスコース",
+  };
+
+  const determineYear = () => {
+    if (!student?.startMonth) return "";
+    try {
+      const start = new Date(student.startMonth + "-01");
+      if (isNaN(start.getTime())) return "";
+      const now = new Date();
+      const diffMonths =
+        (now.getFullYear() - start.getFullYear()) * 12 +
+        (now.getMonth() - start.getMonth());
+      return diffMonths < 12 ? "1年生" : "2年生";
+    } catch {
+      return "";
+    }
+  };
+
+  const displayYear =
+    student?.year === "1st Year"
+      ? "1年生"
+      : student?.year === "2nd Year"
+      ? "2年生"
+      : determineYear();
 
   // -----------------------------------------
   // 🔹 Render
@@ -321,43 +348,47 @@ export default function StudentDashboardPage() {
       </header>
 
       {activeTab === "overview" && (
-  <section className={styles.container}>
-    <h2 className={styles.header}>支払い状況</h2>
+        <section className={styles.container}>
+          <h2 className={styles.header}>支払い状況</h2>
 
-    <div className={styles.courseBox}>
-      コース: {courseInfo?.name || student?.courseId || "unknown"}
-    </div>
+          <div className={styles.courseBox}>
+            コース:{" "}
+            {courseNameMap[student?.courseId] ||
+              courseInfo?.name ||
+              student?.courseId ||
+              "未設定"}{" "}
+            {displayYear}
+          </div>
 
-    <div className={styles.progressContainer}>
-      <div className={styles.progressLabel}>
-        <span>支払い進捗</span>
-        <span>{progress.toFixed(1)}%</span>
-      </div>
-      <div className={styles.progressBarWrap}>
-        <div
-          className={styles.progressBar}
-          style={{ width: `${progress}%` }}
-        ></div>
-      </div>
-    </div>
+          <div className={styles.progressContainer}>
+            <div className={styles.progressLabel}>
+              <span>支払い進捗</span>
+              <span>{progress.toFixed(1)}%</span>
+            </div>
+            <div className={styles.progressBarWrap}>
+              <div
+                className={styles.progressBar}
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
 
-    <div className={styles.summaryGrid}>
-      <div className={styles.card}>
-        <p className={styles.cardTitle}>総学費</p>
-        <p className={styles.cardValue}>{total.toLocaleString()}円</p>
-      </div>
-      <div className={styles.card}>
-        <p className={styles.cardTitle}>支払い済み</p>
-        <p className={styles.cardValue}>{paid.toLocaleString()}円</p>
-      </div>
-      <div className={styles.card}>
-        <p className={styles.cardTitle}>残り</p>
-        <p className={styles.cardValue}>{remaining.toLocaleString()}円</p>
-      </div>
-    </div>
-  </section>
-)}
-
+          <div className={styles.summaryGrid}>
+            <div className={styles.card}>
+              <p className={styles.cardTitle}>総学費</p>
+              <p className={styles.cardValue}>{total.toLocaleString()}円</p>
+            </div>
+            <div className={styles.card}>
+              <p className={styles.cardTitle}>支払い済み</p>
+              <p className={styles.cardValue}>{paid.toLocaleString()}円</p>
+            </div>
+            <div className={styles.card}>
+              <p className={styles.cardTitle}>残り</p>
+              <p className={styles.cardValue}>{remaining.toLocaleString()}円</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {activeTab === "history" && (
         <section className={styles.card}>

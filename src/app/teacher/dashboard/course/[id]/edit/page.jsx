@@ -36,7 +36,7 @@ export default function EditCoursePage() {
       }
     };
     if (id) fetchCourse();
-  }, [id]);
+  }, [id, router]);
 
   // ✅ Update course
   const handleUpdate = async () => {
@@ -111,7 +111,7 @@ export default function EditCoursePage() {
           />
         </div>
 
-        <div className="edit-field">
+        <div className="edit-field"> 
           <label>学年</label>
           <select
             value={course.year || ""}
