@@ -47,6 +47,33 @@ export default function StudentDashboardPage() {
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const params = useParams();
   const routeId = params?.id;
+  const [discount, setDiscount] = useState(0);
+  const [discountInput, setDiscountInput] = useState("");
+
+  // sync discount from student doc when it loads
+  useEffect(() => {
+    if (student && typeof student.discount !== "undefined") {
+      const v = Number(student.discount) || 0;
+      setDiscount(v);
+      setDiscountInput(String(v || ""));
+    }
+  }, [student]);
+
+  // handler to save discount to students doc (only called by teachers/admins)
+  const handleDiscountChange = async (value) => {
+    const v = Number(value) || 0;
+    setDiscount(v);
+    if (!student?.id) return;
+    try {
+      await updateDoc(doc(db, "students", student.id), {
+        discount: v,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("Failed to save discount:", err);
+      alert("割引の保存に失敗しました。コンソールを確認してください。");
+    }
+  };
 
   // 📸 レシートアップロード関数（支払い情報を記録）
   const handleReceiptUpload = async (targetMonth) => {
@@ -826,7 +853,7 @@ export default function StudentDashboardPage() {
     uploading && <div style={{ marginTop: 6 }}>進捗: {uploadProgress}%</div>;
   }
   // total: prefer courseInfo.pricePerMonth, then computedTuition, courseTuition, student.totalFees
-  const total = Number(
+  const baseTotal = Number(
     courseInfo?.totalFee ??
       courseInfo?.pricePerMonth ??
       computedTuition ??
@@ -834,6 +861,10 @@ export default function StudentDashboardPage() {
       student?.totalFees ??
       0
   );
+
+  // applied discount (from student doc if present, otherwise local state)
+  const appliedDiscount = Number(student?.discount ?? discount) || 0;
+  const total = Math.max(baseTotal - appliedDiscount, 0);
 
   // paid: sum of payments amounts from Firestore (real-time)
   const paidFromPayments = payments.reduce(
@@ -945,7 +976,64 @@ export default function StudentDashboardPage() {
           <h1 className={styles.title}>支払い状況</h1>
 
           <div className={styles.infoBox}>
-            <div>コース: {courseDisplayName}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div>コース: {courseDisplayName}</div>
+              <div style={{ marginLeft: 8 }}>
+                {/* show a discount selector; editable only for teachers/admins */}
+                {session?.user &&
+                (session.user.isAdmin || session.user.role === "teacher") ? (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#666",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <label
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      割引:
+                      <input
+                        type="number"
+                        value={discountInput}
+                        onChange={(e) => setDiscountInput(e.target.value)}
+                        placeholder="例: 5000"
+                        style={{ width: 110, padding: "4px 8px" }}
+                      />
+                    </label>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {/* <button
+                        className={styles.secondaryBtn}
+                        onClick={() => setDiscountInput(String(5000))}
+                        type="button"
+                      >
+                        5,000
+                      </button>
+                      <button
+                        className={styles.secondaryBtn}
+                        onClick={() => setDiscountInput(String(10000))}
+                        type="button"
+                      >
+                        10,000
+                      </button> */}
+                      <button
+                        className={styles.primaryBtn}
+                        onClick={() => handleDiscountChange(discountInput)}
+                        type="button"
+                      >
+                        保存
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    割引: {appliedDiscount.toLocaleString()}円
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
