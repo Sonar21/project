@@ -707,52 +707,59 @@ export default function StudentDashboardPage() {
     return () => unsub();
   }, [student?.studentId]);
 
-  // (旧来の詳細フェッチは廃止) 単一の fetchCourse useEffect を使っているため、ここは削除しました。
+  // 🔹 自動リマインダー計算: student.startMonth から現在までの月で未払いの月を見つける
+  const computeMissingMonths = () => {
+    if (!student) return [];
+    const startMonth =
+      student.startMonth || new Date().toISOString().slice(0, 7); // YYYY-MM
+    const [sy, sm] = startMonth.split("-").map((s) => Number(s));
+    const start = new Date(sy, (sm || 1) - 1, 1);
+    const now = new Date();
+    const months = [];
+    const maxMonths = 24; // safety cap
+    let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (cur <= now && months.length < maxMonths) {
+      const ym = cur.toISOString().slice(0, 7);
+      months.push(ym);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    const paidMonths = new Set((payments || []).map((p) => p.month));
+    const missing = months.filter((m) => !paidMonths.has(m));
+    // Return the most recent up to 3 missing months as reminders
+    return missing.slice(-3);
+  };
 
-  // 🔹 支払い履歴をリアルタイム取得
-  useEffect(() => {
-    if (!student?.studentId) return;
+  const reminders = computeMissingMonths();
 
-    const paymentsRef = collection(db, "payments");
-    const q = query(
-      paymentsRef,
-      where("studentId", "==", student.studentId),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setPayments(data);
-      },
-      (err) => {
-        console.error("Payments snapshot error:", err);
-        // Firestore may require a composite index when combining where() and orderBy() on different fields.
-        // The error.message usually includes a direct URL to create the index in Firebase Console — log it so developers can click it.
-        if (err && err.message) {
-          console.warn(
-            "Firestore index required or query failed:",
-            err.message
-          );
-        }
+  const sendReminderEmail = async () => {
+    if (!student) return alert("学生情報が見つかりません。");
+    if (!reminders || reminders.length === 0)
+      return alert("送るべき未払いの月がありません。");
+    try {
+      const res = await fetch("/api/student/reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: student.studentId,
+          email: session?.user?.email || student.email,
+          name: student.name || session?.user?.name,
+          reminders,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "送信失敗");
       }
-    );
+      alert("リマインダーメールを送信しました。");
+    } catch (err) {
+      console.error("sendReminderEmail error", err);
+      alert(
+        "リマインダーメールの送信に失敗しました。コンソールを確認してください。"
+      );
+    }
+  };
 
-    return () => unsub();
-  }, [student?.studentId]);
-
-  // 🔹 ローディング・未ログイン時の表示
-  if (status === "loading" || loading) {
-    return (
-      <div className={styles.center}>
-        <h3>読み込み中です...</h3>
-      </div>
-    );
-  }
+  // (旧来の詳細フェッチは廃止) 単一の fetchCourse useEffect を使っているため、ここは削除しました。
 
   if (status === "unauthenticated") {
     return (
@@ -769,8 +776,8 @@ export default function StudentDashboardPage() {
   {
     uploading && <div style={{ marginTop: 6 }}>進捗: {uploadProgress}%</div>;
   }
-  // total: prefer courseInfo.pricePerMonth, then computedTuition, courseTuition, student.totalFees
-  const total = Number(
+  // total: prefer courseInfo.totalFee, then pricePerMonth, computedTuition, courseTuition, student.totalFees
+  const baseTotal = Number(
     courseInfo?.totalFee ??
       courseInfo?.pricePerMonth ??
       computedTuition ??
@@ -778,6 +785,9 @@ export default function StudentDashboardPage() {
       student?.totalFees ??
       0
   );
+  // If a teacher applied a flat discount on the student doc (e.g. 5000), apply it here.
+  const discount = Number(student?.discount ?? 0) || 0;
+  const total = Math.max(baseTotal - discount, 0);
 
   // paid: sum of payments amounts from Firestore (real-time)
   const paidFromPayments = payments.reduce(
@@ -833,7 +843,7 @@ export default function StudentDashboardPage() {
   const rawCourseName =
     courseInfo?.name ??
     student?.courseId ??
-    session.user.courseName ??
+    session?.user?.courseName ??
     "未設定";
   const hasJapanese = /[\u3040-\u30ff\u4e00-\u9faf]/.test(
     String(rawCourseName)
@@ -906,6 +916,12 @@ export default function StudentDashboardPage() {
               <div className={styles["stat-label"]}>総学費</div>
               <div className={styles["stat-value"]}>
                 {total.toLocaleString()}円
+                {discount > 0 && (
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
+                    割引: -¥{discount.toLocaleString()}（元: ¥
+                    {baseTotal.toLocaleString()}）
+                  </div>
+                )}
               </div>
             </article>
             <article className={styles.stat}>
@@ -923,6 +939,42 @@ export default function StudentDashboardPage() {
           </div>
           <table className={styles.paymentTable}>
             <tbody>
+              {/* Reminders block: show when there are missing months */}
+              {reminders && reminders.length > 0 && (
+                <tr>
+                  <td colSpan={5}>
+                    <div
+                      style={{
+                        padding: 10,
+                        background: "#fff8f0",
+                        borderRadius: 8,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <strong>お支払いのリマインダー</strong>
+                      <div style={{ marginTop: 6 }}>
+                        次の月の支払いが未登録です: {reminders.join("、")}
+                      </div>
+                      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                        <button onClick={sendReminderEmail}>
+                          リマインダーメールを受け取る
+                        </button>
+                        <button
+                          onClick={() =>
+                            navigator.share &&
+                            navigator.share({
+                              title: "支払いのリマインダー",
+                              text: `支払い未登録の月: ${reminders.join("、")}`,
+                            })
+                          }
+                        >
+                          共有
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
               {payments.map((p) => {
                 const date = p.createdAt?.toDate
                   ? p.createdAt.toDate()
@@ -1119,9 +1171,9 @@ export default function StudentDashboardPage() {
             }}
           >
             <p style={{ margin: "6px 0" }}>
-              名前: {student?.name || session.user.name}
+              名前: {student?.name || session?.user?.name}
             </p>
-            <p style={{ margin: "6px 0" }}>メール: {session.user.email}</p>
+            <p style={{ margin: "6px 0" }}>メール: {session?.user?.email}</p>
             <p style={{ margin: "6px 0" }}>
               学籍番号: {student?.studentId || "未登録"}
             </p>
