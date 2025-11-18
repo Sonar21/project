@@ -5,6 +5,11 @@
   padding: 12px 20px;
   border-bottom: 1px solid #e6e6e9;
   background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  /* subtle shadow so the header stands out when sticky */
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .brand {
