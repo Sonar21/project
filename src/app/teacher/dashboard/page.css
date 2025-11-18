@@ -80,6 +80,21 @@
   font-weight: 600;
   color: #444;
 }
+.stat-card {
+  display: block;
+  padding: 16px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.link-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  cursor: pointer;
+}
+
 /* ===========================
    STAT CARD BASE STYLES
 =========================== */
@@ -141,4 +156,40 @@
 
 .link-card:hover::after {
   width: 50%;
+}
+/* Stat Card Layout */
+.stat-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  transition: 0.2s ease;
+}
+
+/* Icon styling */
+.stat-card-icon img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+/* Title + Value */
+.stat-title {
+  font-size: 14px;
+  color: #555;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: bold;
+  margin-top: 3px;
+}
+
+/* Hover */
+.link-card:hover .stat-card-inner {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
 }

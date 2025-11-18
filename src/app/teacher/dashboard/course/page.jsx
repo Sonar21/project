@@ -22,6 +22,18 @@ export default function CoursesPage() {
     nameEn: "",
     fee: "",
     permonth: "",
+    // monthly template for Feb (02) through Oct (10)
+    monthlyTemplate: {
+      "02": "",
+      "03": "",
+      "04": "",
+      "05": "",
+      "06": "",
+      "07": "",
+      "08": "",
+      "09": "",
+      10: "",
+    },
     year: "1st Year",
   });
   const [activeYear, setActiveYear] = useState("All");
@@ -102,6 +114,18 @@ export default function CoursesPage() {
       updatedAt: serverTimestamp(),
     };
 
+    // attach monthly template if provided (normalize numbers)
+    try {
+      const cleaned = {};
+      for (const [m, v] of Object.entries(newCourse.monthlyTemplate || {})) {
+        const parsed = Number(String(v || "").replace(/[^0-9.-]+/g, "")) || 0;
+        cleaned[m] = parsed;
+      }
+      if (Object.keys(cleaned).length > 0) payload.monthlyTemplate = cleaned;
+    } catch (e) {
+      // ignore
+    }
+
     try {
       const coursesRef = collection(db, "courses");
       const docRef = await addDoc(coursesRef, payload);
@@ -113,7 +137,23 @@ export default function CoursesPage() {
       });
 
       // モーダルを閉じてフォームをリセット
-      setNewCourse({ name: "", fee: "", permonth: "", year: "1st Year" });
+      setNewCourse({
+        name: "",
+        fee: "",
+        permonth: "",
+        monthlyTemplate: {
+          "02": "",
+          "03": "",
+          "04": "",
+          "05": "",
+          "06": "",
+          "07": "",
+          "08": "",
+          "09": "",
+          10: "",
+        },
+        year: "1st Year",
+      });
       setIsModalOpen(false);
     } catch (err) {
       console.error("Failed to save course to Firestore:", err);
@@ -150,19 +190,19 @@ export default function CoursesPage() {
             className={activeYear === "All" ? "active" : ""}
             onClick={() => setActiveYear("All")}
           >
-            All
+            全て
           </button>
           <button
             className={activeYear === "1st Year" ? "active" : ""}
             onClick={() => setActiveYear("1st Year")}
           >
-            1st Year
+            1年生
           </button>
           <button
             className={activeYear === "2nd Year" ? "active" : ""}
             onClick={() => setActiveYear("2nd Year")}
           >
-            2nd Year
+            2年生
           </button>
         </div>
 
@@ -180,7 +220,7 @@ export default function CoursesPage() {
             <th>月額</th>
             <th>学生数</th>
             <th>学年</th>
-            <th>Actions</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -234,10 +274,10 @@ export default function CoursesPage() {
       {isModalOpen && (
         <div className="add-modal">
           <div className="modal-content">
-            <h3>Add New Course</h3>
+            <h3>新しいコースを追加</h3>
             <input
               type="text"
-              placeholder="Course Name (display fallback)"
+              placeholder="コース名"
               value={newCourse.name}
               onChange={(e) =>
                 setNewCourse({ ...newCourse, name: e.target.value })
@@ -246,20 +286,81 @@ export default function CoursesPage() {
 
             <input
               type="text"
-              placeholder="Fee (e.g. ¥900,000)"
+              placeholder="学費 (例: 900000)"
               value={newCourse.fee}
               onChange={(e) =>
                 setNewCourse({ ...newCourse, fee: e.target.value })
               }
             />
-            <input
-              type="text"
-              placeholder="permonth (e.g. ¥80000)"
-              value={newCourse.permonth}
-              onChange={(e) =>
-                setNewCourse({ ...newCourse, permonth: e.target.value })
-              }
-            />
+            <div className="permonth-row">
+              <input
+                type="text"
+                placeholder="月額 (例: 80000)"
+                value={newCourse.permonth}
+                onChange={(e) =>
+                  setNewCourse({ ...newCourse, permonth: e.target.value })
+                }
+              />
+              <button
+                type="button"
+                className="apply-all-btn"
+                onClick={() => {
+                  // copy permonth to all monthlyTemplate fields (explicit action)
+                  const val = newCourse.permonth || "";
+                  setNewCourse((prev) => ({
+                    ...prev,
+                    monthlyTemplate: Object.fromEntries(
+                      Object.keys(prev.monthlyTemplate || {}).map((k) => [
+                        k,
+                        val,
+                      ])
+                    ),
+                  }));
+                }}
+              >
+              全ての月に適用
+              </button>
+            </div>
+
+            {/* Monthly template inputs for Feb - Oct */}
+            <div className="monthly-templates">
+              {/* <h4>Monthly Payments (teacher decides):</h4> */}
+              <div className="months-grid">
+                {Object.keys(newCourse.monthlyTemplate || {})
+                  .sort((a, b) => Number(a) - Number(b))
+                  .map((m) => {
+                    const monthLabels = {
+                      "02": "February",
+                      "03": "March",
+                      "04": "April",
+                      "05": "May",
+                      "06": "June",
+                      "07": "July",
+                      "08": "August",
+                      "09": "September",
+                      10: "October",
+                    };
+                    return (
+                      <div className="month-row" key={m}>
+                        <label>{monthLabels[m] || m}</label>
+                        <input
+                          type="text"
+                          value={newCourse.monthlyTemplate[m] || ""}
+                          onChange={(e) =>
+                            setNewCourse((prev) => ({
+                              ...prev,
+                              monthlyTemplate: {
+                                ...prev.monthlyTemplate,
+                                [m]: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
             <select
               value={newCourse.year}
               onChange={(e) =>

@@ -4,7 +4,7 @@ import Providers from "@/app/providers/Providers";
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
+      <body className="appRoot">
         <Providers>{children}</Providers>
       </body>
     </html>

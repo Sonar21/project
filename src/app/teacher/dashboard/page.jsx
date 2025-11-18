@@ -1,28 +1,146 @@
 "use client";
+import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import "./page.css";
 
 import Link from "next/link";
 import StatCard from "@/components/StatCard";
-import ProgressDonut from "@/components/ProgressDonut";
 import RecentActivity from "@/components/RecentActivity";
+import { db } from "@/firebase/clientApp";
+import { collection, onSnapshot } from "firebase/firestore";
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
   const user = session?.user;
 
-  // Placeholder stats — these can be replaced with real queries
+  // dynamic stats: courseCount, totalPaid, totalFees
+  const [courseCount, setCourseCount] = useState(0);
+  const [totalPaid, setTotalPaid] = useState(0);
+  const [totalFees, setTotalFees] = useState(0);
+
+  // subscribe to courses count
+  useEffect(() => {
+    const col = collection(db, "courses");
+    const unsub = onSnapshot(col, (snap) => {
+      setCourseCount(snap.size || 0);
+    });
+    return () => unsub();
+  }, []);
+
+  // subscribe to payments to compute total paid
+  useEffect(() => {
+    const col = collection(db, "payments");
+    const unsub = onSnapshot(col, (snap) => {
+      // Robustly parse amount values and only include confirmed/paid payments
+      const paidStatusSet = new Set(["支払い済み", "paid", "completed"]);
+      const sum = snap.docs.reduce((acc, d) => {
+        const data = d.data() || {};
+        const raw = data.amount;
+        const status = (data.status || "").toString();
+
+        if (!paidStatusSet.has(status)) return acc; // skip unpaid records
+
+        // Parse numbers safely: remove non-numeric except dot and minus
+        const n = parseFloat(String(raw).replace(/[^0-9.-]+/g, ""));
+        const value = Number.isFinite(n) ? n : 0;
+        return acc + value;
+      }, 0);
+      setTotalPaid(sum);
+    });
+    return () => unsub();
+  }, []);
+
+  // subscribe to students to compute total fees
+  useEffect(() => {
+    const col = collection(db, "students");
+    const unsub = onSnapshot(col, (snap) => {
+      const sum = snap.docs.reduce(
+        (acc, d) => acc + (Number(d.data().totalFees) || 0),
+        0
+      );
+      setTotalFees(sum);
+    });
+    return () => unsub();
+  }, []);
+
   const stats = [
-    { title: "コース数", value: 12, color: "#4F9DDE" },
-    { title: "収益合計", value: "¥1,234,567", color: "#57C785" },
-    { title: "アクティブコース", value: 5, color: "#F0B84C" },
-    { title: "支払い率", value: "72%", color: "#6C63FF" },
+    {
+      title: "コース数",
+      value: courseCount,
+      color: "#4F9DDE",
+      link: "/teacher/dashboard/course",
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
+        >
+          <rect width="20" height="14" x="2" y="5" rx="2" fill="#4F9DDE" />
+          <path
+            d="M6 9h12"
+            stroke="#fff"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+          />
+        </svg>
+      ),
+    },
+    {
+      title: "支払金",
+      value: `¥${totalPaid.toLocaleString()}`,
+      color: "#57C785",
+      link: "/teacher/dashboard/payment",
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden
+        >
+          <rect x="2" y="6" width="20" height="12" rx="2" fill="#57C785" />
+          <path
+            d="M7 12h10"
+            stroke="#fff"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+          />
+          <circle cx="8.5" cy="12" r="0.8" fill="#fff" />
+        </svg>
+      ),
+    },
+    // {
+    //   title: "未払金",
+    //   value: `¥${Math.max(0, totalFees - totalPaid).toLocaleString()}`,
+    //   color: "#F0B84C",
+    //   link: "/teacher/dashboard/unpaid",
+    //   icon: (
+    //     <svg
+    //       width="32"
+    //       height="32"
+    //       viewBox="0 0 24 24"
+    //       fill="none"
+    //       xmlns="http://www.w3.org/2000/svg"
+    //       aria-hidden
+    //     >
+    //       <circle cx="12" cy="12" r="9" fill="#F0B84C" />
+    //       <path
+    //         d="M12 8v5"
+    //         stroke="#fff"
+    //         strokeWidth="1.4"
+    //         strokeLinecap="round"
+    //       />
+    //       <circle cx="12" cy="16.5" r="0.7" fill="#fff" />
+    //     </svg>
+    //   ),
+    // },
   ];
 
-  const recent = [
-    { title: "学生 w24006 がレシートをアップロード", time: "10:14" },
-    { title: "支払い 86,000円 が登録されました", time: "2025/11/13" },
-  ];
+  // RecentActivity will auto-subscribe to recent payments when no `items` prop is passed.
 
   return (
     <div className="dashboard">
@@ -35,94 +153,29 @@ export default function TeacherDashboard() {
         </div>
       </header>
 
-      {/* KPI Row */}
+      {/* KPI Row - Clickable cards */}
       <div className="stats-grid">
-        {stats.map((s, i) => (
-          <StatCard key={i} title={s.title} value={s.value} color={s.color} />
+        {stats.map((stat, index) => (
+          <Link key={index} href={stat.link} className="stat-card link-card">
+            <StatCard
+              title={stat.title}
+              value={stat.value}
+              color={stat.color}
+              icon={stat.icon}
+            />
+          </Link>
         ))}
       </div>
 
-      {/* Main grid: donut + course list / recent activity */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 360px",
-          gap: 20,
-          marginTop: 20,
-        }}
-      >
-        <div>
-          <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-            <div style={{ width: 180 }}>
-              <ProgressDonut paid={720000} total={1234567} size={160} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  background: "#fff",
-                  padding: 16,
-                  borderRadius: 12,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                }}
-              >
-                <h3 style={{ margin: 0 }}>コース一覧</h3>
-                <p style={{ marginTop: 8, color: "#6b7280" }}>
-                  コースを選択して詳細を表示します。
-                </p>
-                <div style={{ marginTop: 12 }}>
-                  <Link
-                    href="/teacher/dashboard/course"
-                    className="stat-card link-card"
-                  >
-                    コース管理へ
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Placeholder for course list */}
-          <div
-            style={{
-              marginTop: 18,
-              background: "#fff",
-              padding: 14,
-              borderRadius: 12,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-            }}
-          >
-           
-          </div>
+      <aside>
+        <div className="card" style={{ marginBottom: 12 }}>
+          <h3 style={{ margin: 0 }}>クイックアクション</h3>
         </div>
 
-        <aside>
-          <div
-            style={{
-              background: "#fff",
-              padding: 14,
-              borderRadius: 12,
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-              marginBottom: 12,
-            }}
-          >
-            <h3 style={{ margin: 0 }}>クイックアクション</h3>
-            <div
-              style={{
-                marginTop: 10,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              
-            </div>
-          </div>
-
-          <div style={{ background: "#fff", padding: 12, borderRadius: 12 }}>
-            <RecentActivity items={recent} />
-          </div>
-        </aside>
-      </div>
+        <div className="card">
+          <RecentActivity />
+        </div>
+      </aside>
     </div>
   );
 }

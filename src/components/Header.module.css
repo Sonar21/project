@@ -12,6 +12,55 @@
   font-size: 18px;
 }
 
+/* New styled brand (matches LoginForm aesthetic) */
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    #22c55e,
+    #0ea5e9,
+    #6366f1,
+    #22c55e
+  );
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  animation: floatHeader 5s ease-in-out infinite;
+  font-size: 14px;
+}
+
+.brandGradient {
+  font-weight: 700;
+  font-size: 18px;
+  background: linear-gradient(90deg, #0ea5e9, #6366f1 45%, #22c55e 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.02em;
+}
+
+@keyframes floatHeader {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
 .right {
   display: flex;
   align-items: center;

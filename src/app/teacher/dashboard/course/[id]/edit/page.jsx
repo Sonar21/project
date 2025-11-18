@@ -18,25 +18,38 @@ export default function EditCoursePage() {
   const [loading, setLoading] = useState(true);
 
   // ✅ Fetch course data
-    useEffect(() => {
-      const fetchCourse = async () => {
-        try {
-          const docRef = doc(db, "courses", id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setCourse({ id: docSnap.id, ...docSnap.data() });
-          } else {
-            alert("Course not found");
-            router.push("/teacher/dashboard/course");
-          }
-        } catch (err) {
-          console.error("Error fetching course:", err);
-        } finally {
-          setLoading(false);
+  useEffect(() => {
+    const fetchCourse = async () => {
+      try {
+        const docRef = doc(db, "courses", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = { id: docSnap.id, ...docSnap.data() };
+          // ensure monthlyTemplate exists for editing
+          data.monthlyTemplate = data.monthlyTemplate || {
+            "02": "",
+            "03": "",
+            "04": "",
+            "05": "",
+            "06": "",
+            "07": "",
+            "08": "",
+            "09": "",
+            10: "",
+          };
+          setCourse(data);
+        } else {
+          alert("Course not found");
+          router.push("/teacher/dashboard/course");
         }
-      };
-      if (id) fetchCourse();
-    }, [id, router]);
+      } catch (err) {
+        console.error("Error fetching course:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchCourse();
+  }, [id, router]);
 
   // ✅ Update course
   const handleUpdate = async () => {
@@ -63,6 +76,19 @@ export default function EditCoursePage() {
         // if empty, remove numeric field? we'll set to null
         updatePayload.pricePerMonth = null;
         updatePayload.permonth = null;
+      }
+
+      // include monthlyTemplate normalized if present
+      try {
+        const cleaned = {};
+        for (const [m, v] of Object.entries(course.monthlyTemplate || {})) {
+          const parsedV =
+            Number(String(v || "").replace(/[^0-9.-]+/g, "")) || 0;
+          cleaned[m] = parsedV;
+        }
+        updatePayload.monthlyTemplate = cleaned;
+      } catch (e) {
+        // ignore
       }
 
       await updateDoc(docRef, updatePayload);
@@ -104,16 +130,73 @@ export default function EditCoursePage() {
             onChange={(e) => setCourse({ ...course, name: e.target.value })}
           />
         </div>
-        
+
         <div className="edit-field">
           <label>月額料金</label>
-          <input
-            type="text"
-            value={course.permonth || ""}
-            onChange={(e) => setCourse({ ...course, permonth: e.target.value })}
-          />
-        </div>
+          <div className="permonth-row">
+            <input
+              type="text"
+              value={course.permonth || ""}
+              onChange={(e) =>
+                setCourse({ ...course, permonth: e.target.value })
+              }
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const val = course.permonth || "";
+                setCourse((prev) => ({
+                  ...prev,
+                  monthlyTemplate: Object.fromEntries(
+                    Object.keys(prev.monthlyTemplate || {}).map((k) => [k, val])
+                  ),
+                }));
+              }}
+            >
+              Apply to all months
+            </button>
+          </div>
 
+          {/* monthly template editor */}
+          <div className="monthly-templates">
+            <h4>Monthly Payments (teacher decides)</h4>
+            <div className="months-grid">
+              {Object.keys(course.monthlyTemplate || {})
+                .sort((a, b) => Number(a) - Number(b))
+                .map((m) => {
+                  const monthLabels = {
+                    "02": "February",
+                    "03": "March",
+                    "04": "April",
+                    "05": "May",
+                    "06": "June",
+                    "07": "July",
+                    "08": "August",
+                    "09": "September",
+                    10: "October",
+                  };
+                  return (
+                    <div className="month-row" key={m}>
+                      <label>{monthLabels[m] || m}</label>
+                      <input
+                        type="text"
+                        value={course.monthlyTemplate[m] || ""}
+                        onChange={(e) =>
+                          setCourse((prev) => ({
+                            ...prev,
+                            monthlyTemplate: {
+                              ...prev.monthlyTemplate,
+                              [m]: e.target.value,
+                            },
+                          }))
+                        }
+                      />
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </div>
 
         <div className="edit-field">
           <label>学費</label>

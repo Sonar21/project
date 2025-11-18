@@ -647,6 +647,7 @@ export default function StudentDashboardPage() {
             name: d.name || "未設定",
             pricePerMonth: monthly,
             totalFee: totalFee,
+            monthlyTemplate: d.monthlyTemplate || {},
           });
           setComputedTuition(displayTotal);
         } else {
@@ -673,6 +674,7 @@ export default function StudentDashboardPage() {
                 name: d.name || "未設定",
                 pricePerMonth: monthly,
                 totalFee: totalFee,
+                monthlyTemplate: d.monthlyTemplate || {},
               });
               setComputedTuition(displayTotal);
               found = true;
@@ -714,6 +716,7 @@ export default function StudentDashboardPage() {
                     name: d.name || "未設定",
                     pricePerMonth: monthly,
                     totalFee: totalFee,
+                    monthlyTemplate: d.monthlyTemplate || {},
                   });
                   setComputedTuition(displayTotal);
                   found = true;
