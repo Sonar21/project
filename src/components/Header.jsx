@@ -10,7 +10,12 @@ const Header = () => {
 
   return (
     <header className={styles.header}>
-      <div className={styles.brand}>PayEdu</div>
+      <div className={styles.logoRow}>
+        <span className={styles.logoDot} aria-hidden="true">
+          P
+        </span>
+        <span className={styles.brandGradient}>PayEdu</span>
+      </div>
       <nav>
         {session?.user ? (
           <div className={styles.right}>
