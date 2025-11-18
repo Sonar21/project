@@ -9,6 +9,7 @@
   /* Horizontal padding only so vertical size stays within viewport */
   padding: 0 32px;
   background: rgba(255, 255, 255, 0.9);
+
   /* background: radial-gradient(
     circle at 30% 30%,
     #ffffff 0%,
