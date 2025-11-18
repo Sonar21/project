@@ -9,7 +9,6 @@ import {
   updateDoc,
   addDoc,
   collection,
-  onSnapshot,
   serverTimestamp,
   query,
   where,
@@ -191,24 +190,24 @@ export default function StudentDashboardPage() {
     }
 
     const studentRef = doc(db, "students", String(studentId));
-    const unsub = onSnapshot(
-      studentRef,
-      async (snap) => {
+    (async () => {
+      try {
+        const snap = await getDoc(studentRef);
         if (snap.exists()) {
           setStudent({ ...snap.data(), studentId });
         } else {
           setStudent(null);
         }
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Student snapshot error:", err);
+      } catch (err) {
+        console.error("Student getDoc error:", err);
         setStudent(null);
+      } finally {
         setLoading(false);
       }
-    );
+    })();
 
-    return () => unsub();
+    // no realtime subscription here; single-shot read is sufficient for this page
+    return () => {};
   }, [status, session]);
 
   // 🔹 Googleログイン後、自動で students に登録
@@ -684,20 +683,17 @@ export default function StudentDashboardPage() {
       where("studentId", "==", student.studentId),
       orderBy("createdAt", "desc")
     );
-
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    // Single-shot fetch to avoid continuous streaming reads. Student-level
+    // payments are typically small, so a single getDocs is sufficient.
+    let mounted = true;
+    (async () => {
+      try {
+        const snap = await getDocs(q);
+        if (!mounted) return;
+        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setPayments(data);
-      },
-      (err) => {
-        console.error("Payments snapshot error:", err);
-        // Firestore may require a composite index when combining where() and orderBy() on different fields.
-        // The error.message usually includes a direct URL to create the index in Firebase Console — log it so developers can click it.
+      } catch (err) {
+        console.error("Payments getDocs error:", err);
         if (err && err.message) {
           console.warn(
             "Firestore index required or query failed:",
@@ -705,9 +701,11 @@ export default function StudentDashboardPage() {
           );
         }
       }
-    );
+    })();
 
-    return () => unsub();
+    return () => {
+      mounted = false;
+    };
   }, [student?.studentId]);
 
   // 🔹 自動リマインダー計算: student.startMonth から現在までの月で未払いの月を見つける

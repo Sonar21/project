@@ -7,7 +7,7 @@ import Link from "next/link";
 import StatCard from "@/components/StatCard";
 import RecentActivity from "@/components/RecentActivity";
 import { db } from "@/firebase/clientApp";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
@@ -18,49 +18,57 @@ export default function TeacherDashboard() {
   const [totalPaid, setTotalPaid] = useState(0);
   const [totalFees, setTotalFees] = useState(0);
 
-  // subscribe to courses count
+  // fetch courses count once (avoid realtime subscription)
   useEffect(() => {
-    const col = collection(db, "courses");
-    const unsub = onSnapshot(col, (snap) => {
-      setCourseCount(snap.size || 0);
-    });
-    return () => unsub();
+    (async () => {
+      try {
+        const col = collection(db, "courses");
+        const snap = await getDocs(col);
+        setCourseCount(snap.size || 0);
+      } catch (e) {
+        console.warn("failed to fetch courses count:", e);
+      }
+    })();
   }, []);
 
-  // subscribe to payments to compute total paid
+  // fetch payments once to compute total paid (single read)
   useEffect(() => {
-    const col = collection(db, "payments");
-    const unsub = onSnapshot(col, (snap) => {
-      // Robustly parse amount values and only include confirmed/paid payments
-      const paidStatusSet = new Set(["支払い済み", "paid", "completed"]);
-      const sum = snap.docs.reduce((acc, d) => {
-        const data = d.data() || {};
-        const raw = data.amount;
-        const status = (data.status || "").toString();
-
-        if (!paidStatusSet.has(status)) return acc; // skip unpaid records
-
-        // Parse numbers safely: remove non-numeric except dot and minus
-        const n = parseFloat(String(raw).replace(/[^0-9.-]+/g, ""));
-        const value = Number.isFinite(n) ? n : 0;
-        return acc + value;
-      }, 0);
-      setTotalPaid(sum);
-    });
-    return () => unsub();
+    (async () => {
+      try {
+        const col = collection(db, "payments");
+        const snap = await getDocs(col);
+        const paidStatusSet = new Set(["支払い済み", "paid", "completed"]);
+        const sum = snap.docs.reduce((acc, d) => {
+          const data = d.data() || {};
+          const raw = data.amount;
+          const status = (data.status || "").toString();
+          if (!paidStatusSet.has(status)) return acc;
+          const n = parseFloat(String(raw).replace(/[^0-9.-]+/g, ""));
+          const value = Number.isFinite(n) ? n : 0;
+          return acc + value;
+        }, 0);
+        setTotalPaid(sum);
+      } catch (e) {
+        console.warn("failed to fetch payments for totalPaid:", e);
+      }
+    })();
   }, []);
 
-  // subscribe to students to compute total fees
+  // fetch students once to compute total fees
   useEffect(() => {
-    const col = collection(db, "students");
-    const unsub = onSnapshot(col, (snap) => {
-      const sum = snap.docs.reduce(
-        (acc, d) => acc + (Number(d.data().totalFees) || 0),
-        0
-      );
-      setTotalFees(sum);
-    });
-    return () => unsub();
+    (async () => {
+      try {
+        const col = collection(db, "students");
+        const snap = await getDocs(col);
+        const sum = snap.docs.reduce(
+          (acc, d) => acc + (Number(d.data().totalFees) || 0),
+          0
+        );
+        setTotalFees(sum);
+      } catch (e) {
+        console.warn("failed to fetch students for totalFees:", e);
+      }
+    })();
   }, []);
 
   const stats = [
