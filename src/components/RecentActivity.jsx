@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/clientApp";
 
 export default function RecentActivity({ items = [] }) {
@@ -9,29 +9,39 @@ export default function RecentActivity({ items = [] }) {
   useEffect(() => {
     // If parent provided items, don't auto-subscribe. If empty, subscribe to payments recent.
     if (items && items.length > 0) return undefined;
-
     const paymentsRef = collection(db, "payments");
     const q = query(paymentsRef, orderBy("createdAt", "desc"), limit(6));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
+    let mounted = true;
+    (async () => {
+      try {
+        const snap = await getDocs(q);
+        if (!mounted) return;
         const mapped = snap.docs.map((d) => {
           const p = d.data();
-          const t = p.createdAt && p.createdAt.toDate ? p.createdAt.toDate() : new Date();
+          const t =
+            p.createdAt && p.createdAt.toDate
+              ? p.createdAt.toDate()
+              : new Date();
           const time = t.toLocaleString("ja-JP");
           let title = `${p.studentId || "unknown"} の支払いが登録されました`;
-          if (p.receiptBase64 || p.receiptUrl) title = `${p.studentId || "unknown"} がレシートをアップロードしました`;
-          const detail = `金額: ¥${Number(p.amount || 0).toLocaleString()}  コース: ${p.course || "-"}`;
+          if (p.receiptBase64 || p.receiptUrl)
+            title = `${
+              p.studentId || "unknown"
+            } がレシートをアップロードしました`;
+          const detail = `金額: ¥${Number(
+            p.amount || 0
+          ).toLocaleString()}  コース: ${p.course || "-"}`;
           return { title, time, detail };
         });
         setLiveItems(mapped);
-      },
-      (err) => {
-        console.error("RecentActivity snapshot error:", err);
+      } catch (err) {
+        console.error("RecentActivity getDocs error:", err);
       }
-    );
+    })();
 
-    return () => unsub();
+    return () => {
+      mounted = false;
+    };
   }, [items]);
 
   const renderItems = items && items.length > 0 ? items : liveItems;

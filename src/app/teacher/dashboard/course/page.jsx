@@ -7,12 +7,12 @@ import {
   query,
   where,
   getCountFromServer,
+  getDocs,
   addDoc,
   serverTimestamp,
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot,
   increment,
 } from "firebase/firestore";
 
@@ -26,6 +26,18 @@ export default function CoursesPage() {
     nameEn: "",
     fee: "",
     permonth: "",
+    // monthly template for Feb (02) through Oct (10)
+    monthlyTemplate: {
+      "02": "",
+      "03": "",
+      "04": "",
+      "05": "",
+      "06": "",
+      "07": "",
+      "08": "",
+      "09": "",
+      10: "",
+    },
     year: "1st Year",
   });
   const [activeYear, setActiveYear] = useState("All");
@@ -33,26 +45,21 @@ export default function CoursesPage() {
 
   // ✅ Firestoreからコースをリアルタイム取得
   useEffect(() => {
-    const coursesRef = collection(db, "courses");
-
-    const unsubscribe = onSnapshot(coursesRef, async (snapshot) => {
+    // Single-shot fetch instead of realtime subscription to avoid continuous reads
+    (async () => {
       try {
+        const coursesRef = collection(db, "courses");
+        const snapshot = await getDocs(coursesRef);
+
         const fetchedCourses = await Promise.all(
           snapshot.docs.map(async (docSnap) => {
             const courseData = { id: docSnap.id, ...docSnap.data() };
 
             try {
-              // If the course document already contains a `students` field (kept
-              // in sync by registration logic), prefer that value — it's the
-              // authoritative, per-course (per-doc) count and avoids ambiguity
-              // when multiple course documents share the same courseKey.
               if (typeof courseData.students === "number") {
                 return { ...courseData, students: courseData.students };
               }
 
-              // Otherwise, fall back to counting students documents. Note:
-              // students.collection may store courseId as the short `courseKey`
-              // or the course document ID, so check both and sum.
               const studentsRef = collection(db, "students");
               const courseKey = courseData.courseKey || null;
               const docId = docSnap.id;
@@ -60,13 +67,7 @@ export default function CoursesPage() {
               let total = 0;
 
               if (courseKey) {
-                // Count only students whose courseId matches the courseKey AND
-                // whose grade/year matches the course document's year. This
-                // prevents counting the same students into multiple course
-                // documents that share the same courseKey but represent
-                // different years (1st/2nd).
                 try {
-                  // Try counting by the normalized English grade field first
                   const qGradeEN = query(
                     studentsRef,
                     where("courseId", "==", courseKey),
@@ -75,8 +76,6 @@ export default function CoursesPage() {
                   const snapGradeEN = await getCountFromServer(qGradeEN);
                   total += snapGradeEN.data()?.count ?? 0;
                 } catch (e) {
-                  // if the composite index is missing or the field isn't present,
-                  // fall back to other grade fields separately
                   try {
                     const qGrade = query(
                       studentsRef,
@@ -95,9 +94,6 @@ export default function CoursesPage() {
                       const snapGradeJP = await getCountFromServer(qGradeJP);
                       total += snapGradeJP.data()?.count ?? 0;
                     } catch (e3) {
-                      // As a final fallback (least preferred), do NOT count by
-                      // courseKey alone because it causes duplicates across
-                      // course documents sharing the same courseKey.
                       console.info(
                         "count fallback: could not perform grade-filtered count for",
                         courseKey,
@@ -108,10 +104,6 @@ export default function CoursesPage() {
                 }
               }
 
-              // Some student documents store the canonical course document id
-              // under the `courseDocId` field (migration or admin scripts).
-              // Count those as well so we don't miss students that aren't
-              // recorded in `courseId`.
               try {
                 const qByDocIdField = query(
                   studentsRef,
@@ -122,7 +114,6 @@ export default function CoursesPage() {
                 );
                 total += snapByDocIdField.data()?.count ?? 0;
               } catch (e) {
-                // ignore per-course counting failures; we already have fallback
                 console.warn(
                   "count error for courseDocId field",
                   docSnap.id,
@@ -139,7 +130,6 @@ export default function CoursesPage() {
               return { ...courseData, students: total };
             } catch (err) {
               console.error("count error for course", docSnap.id, err);
-              // fallback to stored field if present, else zero
               return { ...courseData, students: courseData.students ?? 0 };
             }
           })
@@ -147,11 +137,9 @@ export default function CoursesPage() {
 
         setCourses(fetchedCourses);
       } catch (err) {
-        console.error("Error processing courses snapshot", err);
+        console.error("Error fetching courses", err);
       }
-    });
-
-    return () => unsubscribe();
+    })();
   }, []);
 
   // ✅ 日本語・英語どちらでも courseKey を自動判定する関数
@@ -214,6 +202,18 @@ export default function CoursesPage() {
       updatedAt: serverTimestamp(),
     };
 
+    // attach monthly template if provided (normalize numbers)
+    try {
+      const cleaned = {};
+      for (const [m, v] of Object.entries(newCourse.monthlyTemplate || {})) {
+        const parsed = Number(String(v || "").replace(/[^0-9.-]+/g, "")) || 0;
+        cleaned[m] = parsed;
+      }
+      if (Object.keys(cleaned).length > 0) payload.monthlyTemplate = cleaned;
+    } catch (e) {
+      // ignore
+    }
+
     try {
       const coursesRef = collection(db, "courses");
       const docRef = await addDoc(coursesRef, payload);
@@ -225,7 +225,23 @@ export default function CoursesPage() {
       });
 
       // モーダルを閉じてフォームをリセット
-      setNewCourse({ name: "", fee: "", permonth: "", year: "1st Year" });
+      setNewCourse({
+        name: "",
+        fee: "",
+        permonth: "",
+        monthlyTemplate: {
+          "02": "",
+          "03": "",
+          "04": "",
+          "05": "",
+          "06": "",
+          "07": "",
+          "08": "",
+          "09": "",
+          10: "",
+        },
+        year: "1st Year",
+      });
       setIsModalOpen(false);
     } catch (err) {
       console.error("Failed to save course to Firestore:", err);
@@ -262,19 +278,19 @@ export default function CoursesPage() {
             className={activeYear === "All" ? "active" : ""}
             onClick={() => setActiveYear("All")}
           >
-            All
+            全て
           </button>
           <button
             className={activeYear === "1st Year" ? "active" : ""}
             onClick={() => setActiveYear("1st Year")}
           >
-            1st Year
+            1年生
           </button>
           <button
             className={activeYear === "2nd Year" ? "active" : ""}
             onClick={() => setActiveYear("2nd Year")}
           >
-            2nd Year
+            2年生
           </button>
         </div>
 
@@ -292,7 +308,7 @@ export default function CoursesPage() {
             <th>月額</th>
             <th>学生数</th>
             <th>学年</th>
-            <th>Actions</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -346,10 +362,10 @@ export default function CoursesPage() {
       {isModalOpen && (
         <div className="add-modal">
           <div className="modal-content">
-            <h3>Add New Course</h3>
+            <h3>新しいコースを追加</h3>
             <input
               type="text"
-              placeholder="Course Name (display fallback)"
+              placeholder="コース名"
               value={newCourse.name}
               onChange={(e) =>
                 setNewCourse({ ...newCourse, name: e.target.value })
@@ -358,20 +374,81 @@ export default function CoursesPage() {
 
             <input
               type="text"
-              placeholder="Fee (e.g. ¥900,000)"
+              placeholder="学費 (例: 900000)"
               value={newCourse.fee}
               onChange={(e) =>
                 setNewCourse({ ...newCourse, fee: e.target.value })
               }
             />
-            <input
-              type="text"
-              placeholder="permonth (e.g. ¥80000)"
-              value={newCourse.permonth}
-              onChange={(e) =>
-                setNewCourse({ ...newCourse, permonth: e.target.value })
-              }
-            />
+            <div className="permonth-row">
+              <input
+                type="text"
+                placeholder="月額 (例: 80000)"
+                value={newCourse.permonth}
+                onChange={(e) =>
+                  setNewCourse({ ...newCourse, permonth: e.target.value })
+                }
+              />
+              <button
+                type="button"
+                className="apply-all-btn"
+                onClick={() => {
+                  // copy permonth to all monthlyTemplate fields (explicit action)
+                  const val = newCourse.permonth || "";
+                  setNewCourse((prev) => ({
+                    ...prev,
+                    monthlyTemplate: Object.fromEntries(
+                      Object.keys(prev.monthlyTemplate || {}).map((k) => [
+                        k,
+                        val,
+                      ])
+                    ),
+                  }));
+                }}
+              >
+                全ての月に適用
+              </button>
+            </div>
+
+            {/* Monthly template inputs for Feb - Oct */}
+            <div className="monthly-templates">
+              {/* <h4>Monthly Payments (teacher decides):</h4> */}
+              <div className="months-grid">
+                {Object.keys(newCourse.monthlyTemplate || {})
+                  .sort((a, b) => Number(a) - Number(b))
+                  .map((m) => {
+                    const monthLabels = {
+                      "02": "February",
+                      "03": "March",
+                      "04": "April",
+                      "05": "May",
+                      "06": "June",
+                      "07": "July",
+                      "08": "August",
+                      "09": "September",
+                      10: "October",
+                    };
+                    return (
+                      <div className="month-row" key={m}>
+                        <label>{monthLabels[m] || m}</label>
+                        <input
+                          type="text"
+                          value={newCourse.monthlyTemplate[m] || ""}
+                          onChange={(e) =>
+                            setNewCourse((prev) => ({
+                              ...prev,
+                              monthlyTemplate: {
+                                ...prev.monthlyTemplate,
+                                [m]: e.target.value,
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
             <select
               value={newCourse.year}
               onChange={(e) =>
