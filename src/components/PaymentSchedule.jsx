@@ -60,6 +60,8 @@ export default function PaymentSchedule({
           courseInfo && Number(courseInfo.pricePerMonth)
             ? Math.max(0, Math.round(Number(courseInfo.pricePerMonth)))
             : null;
+        const monthlyTemplate =
+          (courseInfo && courseInfo.monthlyTemplate) || {};
 
         // If teacherMonthly is provided, use it for each month; otherwise distribute total across 9 months
         let base = 0;
@@ -87,8 +89,12 @@ export default function PaymentSchedule({
 
           // determine desired dueAmount
           let desiredDue = 0;
-          if (teacherMonthly !== null) desiredDue = teacherMonthly;
-          else {
+          const mm = String(m).padStart(2, "0");
+          if (monthlyTemplate && typeof monthlyTemplate[mm] !== "undefined") {
+            desiredDue = Number(monthlyTemplate[mm]) || 0;
+          } else if (teacherMonthly !== null) {
+            desiredDue = teacherMonthly;
+          } else {
             const extra = remainder > 0 && m - 2 < remainder ? 1 : 0;
             desiredDue = base + extra;
           }
@@ -111,7 +117,15 @@ export default function PaymentSchedule({
             // existing doc: check if dueAmount differs and update
             const existingDoc = snap.docs.find((d) => d.id === monthStr);
             const existingDue = Number(existingDoc?.data()?.dueAmount) || 0;
-            if (existingDue !== desiredDue) {
+            // Update if desiredDue differs and either a monthlyTemplate value
+            // exists for this month (teacher explicitly set it), or there is
+            // no course-level teacherMonthly (we computed distribution).
+            const hasTemplateValue =
+              monthlyTemplate && typeof monthlyTemplate[mm] !== "undefined";
+            if (
+              existingDue !== desiredDue &&
+              (hasTemplateValue || teacherMonthly === null)
+            ) {
               createOrUpdatePromises.push(
                 updateDoc(docRef, {
                   dueAmount: desiredDue,

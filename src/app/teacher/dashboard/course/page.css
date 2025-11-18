@@ -85,19 +85,84 @@
 
 .modal-content {
   background: white;
-  padding: 25px;
+  padding: 18px 20px;
   border-radius: 10px;
-  width: 350px;
+  width: 440px; /* reduced width for more compact modal */
+  max-width: calc(100% - 40px);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .modal-content input {
-  padding: 10px;
-  border: 1px solid #ccc;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.permonth-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.apply-all-btn {
+  background: #2563eb; /* blue */
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.apply-all-btn:hover {
+  background: #1e40af;
+}
+
+.monthly-templates {
+  margin-top: 8px;
+}
+
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 14px;
+  margin-top: 8px;
+}
+
+.month-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.month-row label {
+  width: 100px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.month-row input {
+  flex: 1;
+  text-align: right; /* amounts aligned right */
+}
+
+@media (max-width: 560px) {
+  .modal-content {
+    width: calc(100% - 24px);
+    padding: 18px;
+  }
+  .months-grid {
+    grid-template-columns: 1fr; /* single column on small screens */
+  }
+  .month-row label {
+    width: 90px;
+  }
 }
 
 .modal-actions {
