@@ -1,3 +1,4 @@
+
 .container {
   max-width: 880px;
   margin: 2rem auto;
@@ -33,71 +34,12 @@
   color: #78350f;
 }
 
-/* ---------- Progress ---------- */
-.progressContainer {
-  margin-top: 1.5rem;
-}
-
-.progressLabel {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 500;
-  color: #475569;
-  margin-bottom: 0.4rem;
-}
-
-.progressBarWrap {
-  width: 100%;
-  height: 10px;
-  background-color: #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.progressBar {
-  height: 10px;
-  background: linear-gradient(90deg, #2563eb, #3b82f6);
-  border-radius: 8px;
-  transition: width 0.4s ease-in-out;
-}
-
-/* ---------- Fee Summary Cards ---------- */
-.summaryGrid {
-  display: flex;
-  gap: 1.2rem;
-  margin-top: 1.8rem;
-  flex-wrap: wrap;
-  justify-content: space-between;
-}
-
-.card {
-  flex: 1;
-  min-width: 180px;
-  background-color: #f9fafb;
-  padding: 1rem;
-  border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  text-align: center;
-}
-
-.cardTitle {
-  font-size: 0.9rem;
-  color: #475569;
-  margin-bottom: 0.3rem;
-}
-
-.cardValue {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #111827;
-}
-
 /* ---------- Tabs ---------- */
 .tabs {
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
 }
 
 .tab {
@@ -108,34 +50,212 @@
   cursor: pointer;
   font-weight: 500;
   color: #374151;
-  transition: all 0.2s ease;
+  transition: all 0.12s ease;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .tab:hover {
   background: #e5e7eb;
 }
 
-.activeTab {
+/* used by JS: styles.active */
+.active {
   background-color: #2563eb;
   color: white;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12);
+}
+
+/* ---------- Progress ---------- */
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.percent {
+  font-weight: 700;
+  color: #2563eb;
+}
+
+/* wrapper and bar (JS uses progress-wrap / progress-bar) */
+.progress-wrap,
+.progressBarWrap {
+  width: 100%;
+  height: 12px;
+  background-color: #eef2ff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progress-bar,
+.progressBar {
+  height: 12px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  border-radius: 8px;
+  transition: width 0.4s ease-in-out;
+}
+
+/* ---------- Fee Summary Cards / Stats ---------- */
+.stats {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.stat {
+  flex: 1;
+  min-width: 160px;
+  background-color: #f9fafb;
+  padding: 0.9rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  text-align: left;
+}
+
+.stat-label,
+.cardTitle {
+  font-size: 0.85rem;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value,
+.cardValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* paid / remaining highlight */
+.paid {
+  color: #059669; /* green */
+  font-weight: 700;
+}
+
+.remain {
+  color: #ef4444; /* red */
+  font-weight: 700;
+}
+
+/* ---------- Buttons ---------- */
+.primaryBtn {
+  background: #2563eb;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.secondaryBtn {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+}
+
+/* ---------- Payment Table ---------- */
+.paymentTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.paymentTable td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf2f7;
+  vertical-align: middle;
+}
+
+.paymentTable tr:last-child td {
+  border-bottom: none;
+}
+
+/* small thumbnail placeholder handling (receipt thumbnails live in receiptStyles) */
+.thumb {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e6eef8;
+  cursor: pointer;
+}
+
+/* ---------- Card (re-use) ---------- */
+.card {
+  flex: 1;
+  min-width: 180px;
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  text-align: center;
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 640px) {
+@media (max-width: 880px) {
   .container {
-    padding: 1.2rem;
+    padding: 1rem;
   }
 
-  .summaryGrid {
+  .tabs {
+    gap: 0.6rem;
+  }
+
+  .tab {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  .stats {
     flex-direction: column;
-    gap: 0.8rem;
   }
 
-  .card {
+  .stat {
     min-width: 100%;
   }
 
-  .header h2 {
-    font-size: 1.2rem;
+  .paymentTable td {
+    padding: 8px 6px;
+    font-size: 0.9rem;
+  }
+
+  .thumb {
+    width: 56px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0.8rem;
+    margin: 1rem;
+  }
+
+  .tab {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.88rem;
+  }
+
+  .progress-row {
+    gap: 8px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
   }
 }
