@@ -30,9 +30,9 @@ export default function StudentDashboardIdPage() {
   const { data: session, status } = useSession();
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [courseTuition] = useState(null);
-  const [courseInfo] = useState(null);
-  const [computedTuition] = useState(null);
+  const [courseTuition, setCourseTuition] = useState(null);
+  const [courseInfo, setCourseInfo] = useState(null);
+  const [computedTuition, setComputedTuition] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -79,21 +79,26 @@ export default function StudentDashboardIdPage() {
     setUploading(true);
     setUploadProgress(0);
 
-    try {
-      const toBase64 = (f) =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = (err) => reject(err);
-          reader.readAsDataURL(f);
-        });
+    // Helper: convert File/Blob to base64 data URL
+    const toBase64 = (f) =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(f);
+      });
 
+    try {
+      // convert file to base64 (keeps compatibility with existing UI that
+      // displays receipts using data URLs)
       const base64Data = await toBase64(file);
+
       const paymentsRef = collection(db, "payments");
       const monthValue =
         targetMonth ||
         student.startMonth ||
         new Date().toISOString().slice(0, 7);
+
       const paymentPayload = {
         studentId: student.studentId,
         course: student.courseId || "未設定",
@@ -108,10 +113,12 @@ export default function StudentDashboardIdPage() {
       };
 
       const paymentDocRef = await addDoc(paymentsRef, paymentPayload);
+      // add paymentId field for easier querying later
       await updateDoc(doc(db, "payments", paymentDocRef.id), {
         paymentId: paymentDocRef.id,
       });
 
+      // optimistic local update so UI updates immediately without realtime
       const localCopy = {
         id: paymentDocRef.id,
         paymentId: paymentDocRef.id,
@@ -120,18 +127,20 @@ export default function StudentDashboardIdPage() {
         uploadedAt: new Date(),
       };
       setPayments((prev) => [localCopy, ...(prev || [])]);
+
       alert("支払い情報を保存しました！");
       setFile(null);
       setAmount("");
       setUploadProgress(0);
     } catch (err) {
       console.error("アップロードエラー:", err);
-      alert("アップロードに失敗しました。");
+      alert("アップロードに失敗しました。コンソールを確認してください。");
     } finally {
       setUploading(false);
     }
   };
 
+  // delete a payment (one-shot) with optimistic UI update
   const handleDeletePayment = async (paymentId) => {
     if (!paymentId) return;
     const ok = confirm("この支払い履歴を削除してもよろしいですか？");
@@ -206,6 +215,130 @@ export default function StudentDashboardIdPage() {
       mounted = false;
     };
   }, [status, session, routeId]);
+
+  // 🔹 コース情報を取得（per-id ページでも学費を表示するため）
+  // stable dependency combining courseId and totalFees to avoid extra reruns
+  const _courseKeyAndFees = `${student?.courseId ?? ""}::${String(
+    student?.totalFees ?? ""
+  )}`;
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!student?.courseId) {
+        setCourseInfo(null);
+        setComputedTuition(null);
+        return;
+      }
+
+      // local student year derivation (minimal, same logic as main page)
+      let displayStudentYearLocal = null;
+      if (student?.studentId) {
+        const sid = String(student.studentId);
+        if (sid.length >= 3) {
+          const cohortDigits = sid.slice(1, 3);
+          if (!Number.isNaN(Number(cohortDigits))) {
+            const cohortFull = 2000 + Number(cohortDigits);
+            const nowYear = new Date().getFullYear();
+            displayStudentYearLocal = nowYear - cohortFull + 1;
+            if (displayStudentYearLocal < 1) displayStudentYearLocal = 1;
+          }
+        }
+      }
+
+      const makeOrdinalLocal = (n) => {
+        if (!Number.isFinite(n)) return `${n}`;
+        if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
+        switch (n % 10) {
+          case 1:
+            return `${n}st`;
+          case 2:
+            return `${n}nd`;
+          case 3:
+            return `${n}rd`;
+          default:
+            return `${n}th`;
+        }
+      };
+
+      const studentYearJP =
+        student?.year ||
+        student?.gradeJP ||
+        (displayStudentYearLocal ? `${displayStudentYearLocal}年生` : null);
+      const studentYearEN =
+        student?.grade ||
+        (displayStudentYearLocal
+          ? `${makeOrdinalLocal(displayStudentYearLocal)} Year`
+          : null);
+
+      try {
+        // try exact match by year+courseKey first
+        let qsnap = null;
+        if (studentYearEN) {
+          const qpref = query(
+            collection(db, "courses"),
+            where("courseKey", "==", student.courseId),
+            where("year", "==", studentYearEN),
+            limit(1)
+          );
+          qsnap = await getDocs(qpref);
+        }
+
+        if ((!qsnap || qsnap.empty) && studentYearJP) {
+          const qpref2 = query(
+            collection(db, "courses"),
+            where("courseKey", "==", student.courseId),
+            where("year", "==", studentYearJP),
+            limit(1)
+          );
+          qsnap = await getDocs(qpref2);
+        }
+
+        if (!qsnap || qsnap.empty) {
+          const q = query(
+            collection(db, "courses"),
+            where("courseKey", "==", student.courseId),
+            limit(1)
+          );
+          qsnap = await getDocs(q);
+        }
+
+        if (qsnap && !qsnap.empty) {
+          const docSnap = qsnap.docs[0];
+          const d = docSnap.data();
+          const monthly = Number(d.pricePerMonth) || null;
+          const totalFee = Number(d.fee) || Number(d.tuition) || null;
+          const displayTotal = totalFee ?? monthly ?? 0;
+          setCourseInfo({
+            id: docSnap.id,
+            name: d.name || "未設定",
+            pricePerMonth: monthly,
+            totalFee: totalFee,
+            monthlyTemplate: d.monthlyTemplate || {},
+          });
+          setComputedTuition(displayTotal);
+        } else {
+          // fallback: use student.totalFees if present
+          const fallback = Number(student?.totalFees) || 0;
+          setCourseInfo(null);
+          setComputedTuition(fallback || null);
+        }
+      } catch (err) {
+        console.error("コース取得エラー (per-id):", err);
+        setCourseInfo(null);
+        setComputedTuition(null);
+      }
+    };
+
+    fetchCourse();
+  }, [
+    _courseKeyAndFees,
+    student?.courseId,
+    student?.totalFees,
+    student?.studentId,
+    student?.grade,
+    student?.gradeJP,
+    student?.year,
+  ]);
 
   // Fetch payments once (single-shot)
   useEffect(() => {
