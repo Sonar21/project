@@ -824,7 +824,6 @@ export default function PaymentSchedule({
                         }
                         return Number(s.dueAmount).toLocaleString();
                       })()}
-                      %
                     </>
                   )}
                 </td>

@@ -4,16 +4,12 @@ import Link from "next/link";
 import { db } from "@/firebase/clientApp";
 import {
   collection,
-  query,
-  where,
-  getCountFromServer,
-  getDocs,
   addDoc,
   serverTimestamp,
   updateDoc,
   deleteDoc,
   doc,
-  increment,
+  onSnapshot,
 } from "firebase/firestore";
 
 import "./page.css";
@@ -43,103 +39,19 @@ export default function CoursesPage() {
   const [activeYear, setActiveYear] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // ✅ Firestoreからコースをリアルタイム取得
+  // ✅ Courses listener: rely on `courses/{course}.students` being kept in sync by Cloud Functions.
+  // This is efficient (single listener) and updates immediately when counters change.
   useEffect(() => {
-    // Single-shot fetch instead of realtime subscription to avoid continuous reads
-    (async () => {
-      try {
-        const coursesRef = collection(db, "courses");
-        const snapshot = await getDocs(coursesRef);
-
-        const fetchedCourses = await Promise.all(
-          snapshot.docs.map(async (docSnap) => {
-            const courseData = { id: docSnap.id, ...docSnap.data() };
-
-            try {
-              if (typeof courseData.students === "number") {
-                return { ...courseData, students: courseData.students };
-              }
-
-              const studentsRef = collection(db, "students");
-              const courseKey = courseData.courseKey || null;
-              const docId = docSnap.id;
-
-              let total = 0;
-
-              if (courseKey) {
-                try {
-                  const qGradeEN = query(
-                    studentsRef,
-                    where("courseId", "==", courseKey),
-                    where("gradeEN", "==", courseData.year)
-                  );
-                  const snapGradeEN = await getCountFromServer(qGradeEN);
-                  total += snapGradeEN.data()?.count ?? 0;
-                } catch (e) {
-                  try {
-                    const qGrade = query(
-                      studentsRef,
-                      where("courseId", "==", courseKey),
-                      where("grade", "==", courseData.year)
-                    );
-                    const snapGrade = await getCountFromServer(qGrade);
-                    total += snapGrade.data()?.count ?? 0;
-                  } catch (e2) {
-                    try {
-                      const qGradeJP = query(
-                        studentsRef,
-                        where("courseId", "==", courseKey),
-                        where("gradeJP", "==", courseData.year)
-                      );
-                      const snapGradeJP = await getCountFromServer(qGradeJP);
-                      total += snapGradeJP.data()?.count ?? 0;
-                    } catch (e3) {
-                      console.info(
-                        "count fallback: could not perform grade-filtered count for",
-                        courseKey,
-                        courseData.year
-                      );
-                    }
-                  }
-                }
-              }
-
-              try {
-                const qByDocIdField = query(
-                  studentsRef,
-                  where("courseDocId", "==", docId)
-                );
-                const snapByDocIdField = await getCountFromServer(
-                  qByDocIdField
-                );
-                total += snapByDocIdField.data()?.count ?? 0;
-              } catch (e) {
-                console.warn(
-                  "count error for courseDocId field",
-                  docSnap.id,
-                  e
-                );
-              }
-
-              if (!courseKey || courseKey !== docId) {
-                const qId = query(studentsRef, where("courseId", "==", docId));
-                const snapId = await getCountFromServer(qId);
-                total += snapId.data()?.count ?? 0;
-              }
-
-              return { ...courseData, students: total };
-            } catch (err) {
-              console.error("count error for course", docSnap.id, err);
-              return { ...courseData, students: courseData.students ?? 0 };
-            }
-          })
-        );
-
-        setCourses(fetchedCourses);
-      } catch (err) {
-        console.error("Error fetching courses", err);
-      }
-    })();
+    const coursesRef = collection(db, "courses");
+    const unsubscribe = onSnapshot(coursesRef, (snapshot) => {
+      const list = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        students: d.data().students ?? 0,
+      }));
+      setCourses(list);
+    });
+    return () => unsubscribe();
   }, []);
 
   // ✅ 日本語・英語どちらでも courseKey を自動判定する関数
@@ -197,7 +109,7 @@ export default function CoursesPage() {
       fee: newCourse.fee,
       pricePerMonth: parsedPrice,
       year: newCourse.year,
-      students: newCourse.students || 0,
+      students: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -344,13 +256,13 @@ export default function CoursesPage() {
                   href={`/teacher/dashboard/course/${c.id}/edit`}
                   className="view-btn"
                 >
-                  Edit
+                  編集
                 </Link>
                 <button
                   className="delete-btn"
                   onClick={() => handleDeleteCourse(c.id)}
                 >
-                  Delete
+                  削除
                 </button>
               </td>
             </tr>

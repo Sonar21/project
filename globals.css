@@ -138,6 +138,13 @@ body {
   line-height: 1.6;
 }
 
+/* App root flex layout so footer sits at the bottom on short pages */
+.appRoot {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
 /* 見出しなど */
 h1 {
   font-size: 2rem;

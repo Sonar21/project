@@ -796,45 +796,6 @@ export default function StudentDashboardPage() {
     0
   );
 
-  // --- Compute Feb(02) .. Oct(10) monthly amounts locally without extra reads ---
-  const computeMonthlyAmounts = () => {
-    const year = new Date().getFullYear();
-    const monthlyTemplate = courseInfo?.monthlyTemplate || {};
-    const teacherMonthly =
-      courseInfo && Number(courseInfo.pricePerMonth)
-        ? Math.max(0, Math.round(Number(courseInfo.pricePerMonth)))
-        : null;
-
-    let base = 0;
-    let remainder = 0;
-    if (teacherMonthly === null) {
-      const total =
-        Number(courseInfo?.totalFee ?? courseInfo?.pricePerMonth) ||
-        Number(student?.totalFees) ||
-        0;
-      base = Math.floor(total / 9);
-      remainder = total - base * 9;
-    }
-
-    const arr = [];
-    for (let m = 2; m <= 10; m++) {
-      const mm = String(m).padStart(2, "0");
-      let due = 0;
-      if (typeof monthlyTemplate[mm] !== "undefined") {
-        due = Number(monthlyTemplate[mm]) || 0;
-      } else if (teacherMonthly !== null) {
-        due = teacherMonthly;
-      } else {
-        const extra = remainder > 0 && m - 2 < remainder ? 1 : 0;
-        due = base + extra;
-      }
-      const monthId = `${year}-${mm}`;
-      arr.push({ month: monthId, amount: due });
-    }
-    return arr;
-  };
-
-  const monthlyAmounts = computeMonthlyAmounts();
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
 
   const remaining = Math.max(total - paid, 0);
@@ -982,37 +943,9 @@ export default function StudentDashboardPage() {
               </div>
             </article>
           </div>
-          {/* Monthly amounts (Feb-Oct) — computed locally to avoid extra Firestore reads */}
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              flexWrap: "wrap",
-              marginBottom: 12,
-            }}
-          >
-            {monthlyAmounts.map((m) => (
-              <div
-                key={m.month}
-                style={{
-                  minWidth: 120,
-                  padding: 10,
-                  background: "#fff",
-                  borderRadius: 8,
-                  boxShadow: "0 0 0 1px rgba(0,0,0,0.04)",
-                }}
-              >
-                <div style={{ fontSize: 12, color: "#666" }}>{m.month}</div>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>
-                  ¥{Number(m.amount || 0).toLocaleString()}
-                </div>
-              </div>
-            ))}
-          </div>
 
           <table className={styles.paymentTable}>
             <tbody>
-            
               {payments.map((p) => {
                 const date = p.createdAt?.toDate
                   ? p.createdAt.toDate()
