@@ -794,6 +794,7 @@ export default function StudentDashboardPage() {
     (sum, p) => sum + (Number(p.amount) || 0),
     0
   );
+
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
 
   const remaining = Math.max(total - paid, 0);
@@ -849,7 +850,11 @@ export default function StudentDashboardPage() {
     String(rawCourseName)
   );
   let courseDisplayName = rawCourseName;
-  if (hasJapanese) {
+  // If courseInfo explicitly provides a `year` field (e.g. "2nd Year"),
+  // prefer it unchanged. Otherwise fall back to student-derived year labels.
+  if (courseInfo?.year) {
+    courseDisplayName = `${rawCourseName} ${courseInfo.year}`;
+  } else if (hasJapanese) {
     if (studentYearJP) courseDisplayName = `${rawCourseName} ${studentYearJP}`;
   } else {
     if (studentYearEN) courseDisplayName = `${rawCourseName} ${studentYearEN}`;
@@ -937,9 +942,9 @@ export default function StudentDashboardPage() {
               </div>
             </article>
           </div>
+
           <table className={styles.paymentTable}>
             <tbody>
-            
               {payments.map((p) => {
                 const date = p.createdAt?.toDate
                   ? p.createdAt.toDate()

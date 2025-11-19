@@ -4,16 +4,20 @@ import Link from "next/link";
 import { db } from "@/firebase/clientApp";
 import {
   collection,
+
   onSnapshot,
   query,
   where,
   getCountFromServer,
   getDocs,
+
   addDoc,
   serverTimestamp,
   updateDoc,
   deleteDoc,
   doc,
+
+
 } from "firebase/firestore";
 
 import "./page.css";
@@ -113,7 +117,7 @@ export default function CoursesPage() {
       fee: newCourse.fee,
       pricePerMonth: parsedPrice,
       year: newCourse.year,
-      students: newCourse.students || 0,
+      students: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -260,13 +264,13 @@ export default function CoursesPage() {
                   href={`/teacher/dashboard/course/${c.id}/edit`}
                   className="view-btn"
                 >
-                  Edit
+                  編集
                 </Link>
                 <button
                   className="delete-btn"
                   onClick={() => handleDeleteCourse(c.id)}
                 >
-                  Delete
+                  削除
                 </button>
               </td>
             </tr>

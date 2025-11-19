@@ -8,6 +8,7 @@ import StatCard from "@/components/StatCard";
 import RecentActivity from "@/components/RecentActivity";
 import { db } from "@/firebase/clientApp";
 
+
 import {
   collection,
   onSnapshot,
@@ -15,6 +16,7 @@ import {
   orderBy,
   limit,
 } from "firebase/firestore";
+
 
 
 export default function TeacherDashboard() {
