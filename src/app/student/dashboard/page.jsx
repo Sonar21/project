@@ -1012,42 +1012,7 @@ export default function StudentDashboardPage() {
 
           <table className={styles.paymentTable}>
             <tbody>
-              {/* Reminders block: show when there are missing months */}
-              {reminders && reminders.length > 0 && (
-                <tr>
-                  <td colSpan={5}>
-                    <div
-                      style={{
-                        padding: 10,
-                        background: "#fff8f0",
-                        borderRadius: 8,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <strong>お支払いのリマインダー</strong>
-                      <div style={{ marginTop: 6 }}>
-                        次の月の支払いが未登録です: {reminders.join("、")}
-                      </div>
-                      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-                        <button onClick={sendReminderEmail}>
-                          リマインダーメールを受け取る
-                        </button>
-                        <button
-                          onClick={() =>
-                            navigator.share &&
-                            navigator.share({
-                              title: "支払いのリマインダー",
-                              text: `支払い未登録の月: ${reminders.join("、")}`,
-                            })
-                          }
-                        >
-                          共有
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
+            
               {payments.map((p) => {
                 const date = p.createdAt?.toDate
                   ? p.createdAt.toDate()
