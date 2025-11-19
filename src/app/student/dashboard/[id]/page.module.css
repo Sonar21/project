@@ -1,4 +1,3 @@
-
 .container {
   max-width: 880px;
   margin: 2rem auto;
@@ -139,12 +138,14 @@
 
 /* paid / remaining highlight */
 .paid {
-  color: #059669; /* green */
+  color: #059669;
+  /* green */
   font-weight: 700;
 }
 
 .remain {
-  color: #ef4444; /* red */
+  color: #ef4444;
+  /* red */
   font-weight: 700;
 }
 
@@ -183,6 +184,113 @@
 
 .paymentTable tr:last-child td {
   border-bottom: none;
+}
+
+/* Dynamic table improvements */
+.paymentTable td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #edf2f7;
+  vertical-align: middle;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.paymentTable td:nth-child(1) {
+  width: 120px;
+}
+
+.paymentTable td:nth-child(2) {
+  width: 100px;
+}
+
+.paymentTable td:nth-child(3) {
+  width: 140px;
+}
+
+.paymentTable td:nth-child(4) {
+  width: 160px;
+}
+
+.paymentTable td:last-child {
+  width: 220px;
+}
+
+/* Actions cell layout */
+.paymentTable td:last-child {
+  text-align: right;
+  padding-left: 8px;
+}
+
+.paymentTable td:last-child>div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* thumbnail appearance */
+.thumb {
+  width: 72px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(66, 133, 244, 0.12);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+}
+
+/* secondary button tweaks (delete) */
+.secondaryBtn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f5f7fb;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  color: #111827;
+  font-weight: 600;
+}
+
+.secondaryBtn:hover {
+  background: #eef6ff;
+  transform: translateY(-1px);
+}
+
+.secondaryBtn[disabled],
+.secondaryBtn.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  transform: none;
+}
+
+/* unpaid style fallback (JS adds .unpaid in className) */
+.status.unpaid {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* small screens: stack payment info for readability */
+@media (max-width: 720px) {
+
+  .paymentTable,
+  .paymentTable tbody,
+  .paymentTable tr,
+  .paymentTable td {
+    display: block;
+    width: 100%;
+  }
+
+  .paymentTable tr {
+    margin-bottom: 14px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .paymentTable td {
+    padding: 8px 12px;
+  }
+
+  .paymentTable td:last-child {
+    text-align: right;
+  }
 }
 
 /* small thumbnail placeholder handling (receipt thumbnails live in receiptStyles) */
@@ -258,4 +366,126 @@
   .stat-value {
     font-size: 1rem;
   }
+}
+
+/* Upload tab styles */
+.uploadCard {
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px solid #eef3fb;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  box-shadow: 0 6px 18px rgba(79, 157, 222, 0.04);
+}
+
+.uploadRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  /* Desktop: keep controls inline (no wrap) so form reads left-to-right */
+  flex-wrap: nowrap;
+  margin-top: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+}
+
+/* small, reusable input styles used by the upload form */
+.inputSmall {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #dbeafe;
+  background: #fff;
+  min-width: 120px;
+  flex: 0 0 160px;
+}
+
+.inputFile {
+  border: 1px dashed #dbeafe;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+  min-width: 160px;
+  flex: 0 0 260px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uploadBtn {
+  background: linear-gradient(90deg, #4f9dde 0%, #2563eb 100%);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.uploadBtn[disabled] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.uploadProgress {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-top: 4px;
+  width: 160px;
+}
+
+.btn {
+  padding: 10px 20px;
+  background: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.uploadPreview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.previewThumb {
+  width: 80px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 24, 40, 0.06);
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.06);
+}
+
+.progressBarInline {
+  height: 8px;
+  background: #eef2ff;
+  border-radius: 6px;
+  overflow: hidden;
+  width: 160px;
+}
+
+.progressBarInline>i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4f9dde, #2563eb);
+  width: 0%;
+  transition: width 0.18s ease;
 }

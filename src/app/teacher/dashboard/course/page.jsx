@@ -4,20 +4,16 @@ import Link from "next/link";
 import { db } from "@/firebase/clientApp";
 import {
   collection,
-
+  onSnapshot,
   query,
   where,
   getCountFromServer,
   getDocs,
-
   addDoc,
   serverTimestamp,
   updateDoc,
   deleteDoc,
   doc,
-
-
-
 } from "firebase/firestore";
 
 import "./page.css";
