@@ -109,7 +109,7 @@ export default function CoursesPage() {
       fee: newCourse.fee,
       pricePerMonth: parsedPrice,
       year: newCourse.year,
-      students: newCourse.students || 0,
+      students: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -318,7 +318,7 @@ export default function CoursesPage() {
                   }));
                 }}
               >
-              全ての月に適用
+                全ての月に適用
               </button>
             </div>
 

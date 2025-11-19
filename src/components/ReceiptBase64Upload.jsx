@@ -5,10 +5,11 @@ import {
   collection,
   addDoc,
   serverTimestamp,
-  onSnapshot,
+  getDocs,
   query,
   where,
   orderBy,
+  limit,
 } from "firebase/firestore";
 import { db } from "@/firebase/clientApp";
 import Img from "next./image";
@@ -36,23 +37,30 @@ export default function ReceiptBase64Upload({ studentId, initialMonth }) {
 
   useEffect(() => {
     if (!studentId) return;
+    let mounted = true;
     const paymentsRef = collection(db, "payments");
+    // single read with limit to avoid streaming reads; adjust limit as needed
     const q = query(
       paymentsRef,
       where("studentId", "==", studentId),
-      orderBy("uploadedAt", "desc")
+      orderBy("uploadedAt", "desc"),
+      limit(50)
     );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
+
+    (async () => {
+      try {
+        const snap = await getDocs(q);
+        if (!mounted) return;
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setPayments(data);
-      },
-      (err) => {
-        console.error("payments snapshot error:", err);
+      } catch (err) {
+        console.error("payments getDocs error:", err);
       }
-    );
-    return () => unsub();
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, [studentId]);
 
   const toBase64 = (file) =>

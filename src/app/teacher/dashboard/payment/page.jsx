@@ -6,7 +6,6 @@ import {
   collection,
   query,
   orderBy,
-  onSnapshot,
   doc,
   deleteDoc,
   getDocs,
@@ -25,20 +24,23 @@ export default function TeacherPaymentsPage() {
   useEffect(() => {
     const paymentsRef = collection(db, "payments");
     const q = query(paymentsRef, orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
+    let mounted = true;
+    (async () => {
+      try {
+        const snap = await getDocs(q);
+        if (!mounted) return;
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setPayments(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error("Payments snapshot error:", err);
+      } catch (err) {
+        console.error("Payments getDocs error:", err);
         setPayments([]);
-        setLoading(false);
+      } finally {
+        if (mounted) setLoading(false);
       }
-    );
-    return () => unsub();
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const monthLabels = [

@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { collection, query, where, onSnapshot, doc, deleteDoc } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
 import { db } from "@/firebase/clientApp";
 import Link from "next/link";
 import "./detail.css";
@@ -17,40 +24,43 @@ export default function CourseDetailPage() {
   useEffect(() => {
     if (!id) return;
 
-    // Subscribe to students where courseId == id and where courseDocId == id
+    // Single-shot fetches instead of realtime subscriptions to reduce reads.
     // Merge results and deduplicate by document id so students stored under
     // either field are shown in the course detail.
-    const qByCourseId = query(collection(db, "students"), where("courseId", "==", id));
-    const qByCourseDocId = query(collection(db, "students"), where("courseDocId", "==", id));
+    (async () => {
+      try {
+        const qByCourseId = query(
+          collection(db, "students"),
+          where("courseId", "==", id)
+        );
+        const qByCourseDocId = query(
+          collection(db, "students"),
+          where("courseDocId", "==", id)
+        );
 
-    const map = new Map();
+        const [snap1, snap2] = await Promise.all([
+          getDocs(qByCourseId),
+          getDocs(qByCourseDocId),
+        ]);
 
-    const unsub1 = onSnapshot(qByCourseId, (snapshot) => {
-      // rebuild/merge entries from this query
-      snapshot.docs.forEach((d) => {
-        map.set(d.id, { id: d.id, ...d.data() });
-      });
-      setStudents(Array.from(map.values()));
-    });
+        const map = new Map();
+        snap1.docs.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
+        snap2.docs.forEach((d) => map.set(d.id, { id: d.id, ...d.data() }));
 
-    const unsub2 = onSnapshot(qByCourseDocId, (snapshot) => {
-      snapshot.docs.forEach((d) => {
-        map.set(d.id, { id: d.id, ...d.data() });
-      });
-      setStudents(Array.from(map.values()));
-    });
-
-    return () => {
-      try { unsub1(); } catch (e) {}
-      try { unsub2(); } catch (e) {}
-    };
+        setStudents(Array.from(map.values()));
+      } catch (e) {
+        console.error("Failed to fetch students for course:", e);
+      }
+    })();
+    // no realtime subscription -> nothing to cleanup
+    return undefined;
   }, [id]);
 
   // 🔍 Filter students by email or student number
   const filteredStudents = students.filter(
     (s) =>
       s.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.studentId?.toLowerCase().includes(searchTerm.toLowerCase()),
+      s.studentId?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // 🗑️ Delete a specific student
@@ -128,8 +138,8 @@ export default function CourseDetailPage() {
                       s.status === "完了"
                         ? "status success"
                         : s.status === "一部支払い"
-                          ? "status partial"
-                          : "status pending"
+                        ? "status partial"
+                        : "status pending"
                     }
                   >
                     {s.status || "未設定"}
@@ -141,11 +151,7 @@ export default function CourseDetailPage() {
                     onClick={() => handleDeleteStudent(s.id)}
                     className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
                   >
-
                     削除
-
-                  
-
                   </button>
                 </td>
               </tr>
