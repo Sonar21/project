@@ -1,4 +1,3 @@
-// In-memory demo user store. For production, replace with a DB.
 const users = new Map();
 
 // seed users
@@ -33,11 +32,13 @@ export function getUserByEmail(email) {
   return null;
 }
 
-export function createOrGetUserByEmail(email, name) {
+export function createOrGetUserByEmail(email, name, nameKana = "") {
   const existing = getUserByEmail(email);
   if (existing) return existing;
+  // Only allow institutional emails
+  if (!isAllowedInstitutionEmail(email)) return null;
   // create new student user; studentId from local part of email
-  const local = String(email).split('@')[0].toLowerCase();
+  const local = String(email).split("@")[0].toLowerCase();
   const id = String(Date.now());
   // determine role from email (student vs teacher)
   const role = determineRoleByEmail(email);
@@ -53,26 +54,40 @@ export function createOrGetUserByEmail(email, name) {
   return newUser;
 }
 
+export function isAllowedInstitutionEmail(email) {
+  if (!email) return false;
+  const parts = String(email).toLowerCase().split("@");
+  if (parts.length !== 2) return false;
+  const domain = parts[1];
+  return (
+    domain.endsWith("osfl.ac.jp") || domain.endsWith("std.it-college.ac.jp")
+  );
+}
+
 // Determine role by email patterns for osfl.ac.jp
 // - Student: local part matches Wxxxxx or Kxxxxx (starts with W or K followed by digits)
 // - Teacher: local part is alphabetic name (no digits)
 // Returns either 'student' or 'teacher' (defaults to 'student')
 export function determineRoleByEmail(email) {
-  if (!email) return 'student';
-  const parts = String(email).toLowerCase().split('@');
-  if (parts.length !== 2) return 'student';
+  if (!email) return "student";
+  const parts = String(email).toLowerCase().split("@");
+  if (parts.length !== 2) return "student";
   const [local, domain] = parts;
-  if (!domain.endsWith('osfl.ac.jp')) return 'student';
+  // Allow both osfl.ac.jp and std.it-college.ac.jp domains
+  if (
+    !(domain.endsWith("osfl.ac.jp") || domain.endsWith("std.it-college.ac.jp"))
+  )
+    return "student";
 
   // Student pattern: starts with W or K followed by digits, e.g. W24002 or K12345
-  if (/^[wk]\d{1,}$/i.test(local)) return 'student';
+  if (/^[wk]\d{1,}$/i.test(local)) return "student";
 
   // Teacher pattern: alphabetic name without digits
-  if (/^[a-z]+$/i.test(local)) return 'teacher';
+  if (/^[a-z._-]+$/i.test(local)) return "teacher";
 
   // Fallback: if contains digits, treat as student, else teacher
-  if (/\d/.test(local)) return 'student';
-  return 'teacher';
+  if (/\d/.test(local)) return "student";
+  return "teacher";
 }
 
 export function listUsers() {
@@ -81,6 +96,7 @@ export function listUsers() {
     studentId: u.studentId,
     name: u.name,
     email: u.email,
+    courseId: u.courseId || "",
     role: u.role,
   }));
 }
@@ -96,6 +112,28 @@ export function updateUserRole(studentId, newRole) {
     studentId: u.studentId,
     name: u.name,
     email: u.email,
+    role: u.role,
+  };
+}
+
+// Update arbitrary user fields (used by admin API)
+export function updateUser(studentId, updates = {}) {
+  const key = String(studentId).toLowerCase();
+  const u = users.get(key);
+  if (!u) return null;
+  // Acceptable updates: courseId (or legacy course), name, email, role
+  if (updates.courseId !== undefined) u.courseId = updates.courseId;
+  else if (updates.course !== undefined) u.courseId = updates.course;
+  if (updates.name !== undefined) u.name = updates.name;
+  if (updates.email !== undefined) u.email = updates.email;
+  if (updates.role !== undefined) u.role = updates.role;
+  users.set(key, u);
+  return {
+    id: u.id,
+    studentId: u.studentId,
+    name: u.name,
+    email: u.email,
+    courseId: u.courseId || "",
     role: u.role,
   };
 }

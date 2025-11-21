@@ -1,0 +1,491 @@
+.container {
+  max-width: 880px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  font-family: "Noto Sans JP", "Inter", sans-serif;
+}
+
+/* ---------- Header ---------- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.8rem;
+}
+
+.header h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* ---------- Course Info ---------- */
+.courseBox {
+  background: #fff7e6;
+  border-left: 5px solid #fbbf24;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  margin-bottom: 1.2rem;
+  color: #78350f;
+}
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.12s ease;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tab:hover {
+  background: #e5e7eb;
+}
+
+/* used by JS: styles.active */
+.active {
+  background-color: #2563eb;
+  color: white;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12);
+}
+
+/* ---------- Progress ---------- */
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.percent {
+  font-weight: 700;
+  color: #2563eb;
+}
+
+/* wrapper and bar (JS uses progress-wrap / progress-bar) */
+.progress-wrap,
+.progressBarWrap {
+  width: 100%;
+  height: 12px;
+  background-color: #eef2ff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progress-bar,
+.progressBar {
+  height: 12px;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  border-radius: 8px;
+  transition: width 0.4s ease-in-out;
+}
+
+/* ---------- Fee Summary Cards / Stats ---------- */
+.stats {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.stat {
+  flex: 1;
+  min-width: 160px;
+  background-color: #f9fafb;
+  padding: 0.9rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  text-align: left;
+}
+
+.stat-label,
+.cardTitle {
+  font-size: 0.85rem;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value,
+.cardValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* paid / remaining highlight */
+.paid {
+  color: #059669;
+  /* green */
+  font-weight: 700;
+}
+
+.remain {
+  color: #ef4444;
+  /* red */
+  font-weight: 700;
+}
+
+/* ---------- Buttons ---------- */
+.primaryBtn {
+  background: #2563eb;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.secondaryBtn {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+}
+
+/* ---------- Payment Table ---------- */
+.paymentTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.paymentTable td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf2f7;
+  vertical-align: middle;
+}
+
+.paymentTable tr:last-child td {
+  border-bottom: none;
+}
+
+/* Dynamic table improvements */
+.paymentTable td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #edf2f7;
+  vertical-align: middle;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.paymentTable td:nth-child(1) {
+  width: 120px;
+}
+
+.paymentTable td:nth-child(2) {
+  width: 100px;
+}
+
+.paymentTable td:nth-child(3) {
+  width: 140px;
+}
+
+.paymentTable td:nth-child(4) {
+  width: 160px;
+}
+
+.paymentTable td:last-child {
+  width: 220px;
+}
+
+/* Actions cell layout */
+.paymentTable td:last-child {
+  text-align: right;
+  padding-left: 8px;
+}
+
+.paymentTable td:last-child>div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* thumbnail appearance */
+.thumb {
+  width: 72px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(66, 133, 244, 0.12);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+}
+
+/* secondary button tweaks (delete) */
+.secondaryBtn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f5f7fb;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  color: #111827;
+  font-weight: 600;
+}
+
+.secondaryBtn:hover {
+  background: #eef6ff;
+  transform: translateY(-1px);
+}
+
+.secondaryBtn[disabled],
+.secondaryBtn.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  transform: none;
+}
+
+/* unpaid style fallback (JS adds .unpaid in className) */
+.status.unpaid {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* small screens: stack payment info for readability */
+@media (max-width: 720px) {
+
+  .paymentTable,
+  .paymentTable tbody,
+  .paymentTable tr,
+  .paymentTable td {
+    display: block;
+    width: 100%;
+  }
+
+  .paymentTable tr {
+    margin-bottom: 14px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .paymentTable td {
+    padding: 8px 12px;
+  }
+
+  .paymentTable td:last-child {
+    text-align: right;
+  }
+}
+
+/* small thumbnail placeholder handling (receipt thumbnails live in receiptStyles) */
+.thumb {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e6eef8;
+  cursor: pointer;
+}
+
+/* ---------- Card (re-use) ---------- */
+.card {
+  flex: 1;
+  min-width: 180px;
+  background-color: #f9fafb;
+  padding: 1rem;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 880px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .tabs {
+    gap: 0.6rem;
+  }
+
+  .tab {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  .stats {
+    flex-direction: column;
+  }
+
+  .stat {
+    min-width: 100%;
+  }
+
+  .paymentTable td {
+    padding: 8px 6px;
+    font-size: 0.9rem;
+  }
+
+  .thumb {
+    width: 56px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0.8rem;
+    margin: 1rem;
+  }
+
+  .tab {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.88rem;
+  }
+
+  .progress-row {
+    gap: 8px;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+}
+
+/* Upload tab styles */
+.uploadCard {
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px solid #eef3fb;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  box-shadow: 0 6px 18px rgba(79, 157, 222, 0.04);
+}
+
+.uploadRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  /* Desktop: keep controls inline (no wrap) so form reads left-to-right */
+  flex-wrap: nowrap;
+  margin-top: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+}
+
+/* small, reusable input styles used by the upload form */
+.inputSmall {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #dbeafe;
+  background: #fff;
+  min-width: 120px;
+  flex: 0 0 160px;
+}
+
+.inputFile {
+  border: 1px dashed #dbeafe;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+  min-width: 160px;
+  flex: 0 0 260px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uploadBtn {
+  background: linear-gradient(90deg, #4f9dde 0%, #2563eb 100%);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.uploadBtn[disabled] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.uploadProgress {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-top: 4px;
+  width: 160px;
+}
+
+.btn {
+  padding: 10px 20px;
+  background: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.uploadPreview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.previewThumb {
+  width: 80px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 24, 40, 0.06);
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.06);
+}
+
+.progressBarInline {
+  height: 8px;
+  background: #eef2ff;
+  border-radius: 6px;
+  overflow: hidden;
+  width: 160px;
+}
+
+.progressBarInline>i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4f9dde, #2563eb);
+  width: 0%;
+  transition: width 0.18s ease;
+}

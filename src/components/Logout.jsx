@@ -18,7 +18,11 @@ const Logout = () => {
       // This is a best-effort attempt to force Google to show the account selector next time.
       try {
         // This will open a short-lived tab; many browsers block or block popups — it's a best-effort.
-        window.open("https://accounts.google.com/Logout?hl=ja", "_blank", "noopener,noreferrer");
+        window.open(
+          "https://accounts.google.com/Logout?hl=ja",
+          "_blank",
+          "noopener,noreferrer",
+        );
       } catch (e) {
         // ignore
       }

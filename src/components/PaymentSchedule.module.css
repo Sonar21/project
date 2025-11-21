@@ -1,0 +1,159 @@
+:root {
+  --gap: 8px;
+  --pad: 8px;
+  --muted: #666;
+  --border: #eee;
+  --input-border: #ddd;
+}
+
+.yearLabel {
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.loading {
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table thead th {
+  text-align: left;
+  padding: 14px 16px;
+  font-weight: 600;
+  color: #111827;
+  border-bottom: 1px solid var(--border);
+}
+
+.thLeft,
+.thRight,
+.thCenter,
+.td,
+.tdRight,
+.tdCenter {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+
+.tdRight,
+.thRight {
+  text-align: right;
+}
+
+.tdCenter,
+.thCenter {
+  text-align: center;
+}
+
+.rowBorder {
+  border-bottom: 1px solid var(--border);
+}
+
+.inputAmount {
+  width: 120px;
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+}
+
+.hiddenAmount {
+  display: inline-block;
+  padding: 6px 8px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.amountText {
+  display: inline-block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.receiptCell {
+  padding: var(--pad);
+}
+.receiptCell img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.statusText {
+  font-weight: 500;
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 13px;
+
+  background: linear-gradient(90deg, #f97316, #fb923c); /* fallback */
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+
+  background: linear-gradient(
+    90deg,
+    #f97316,
+    #fb923c
+  ); /* default: unpaid (orange) */
+
+}
+
+/* small colored dot before the label */
+.statusText::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: rgba(255,255,255,0.6);
+}
+
+
+/* status variants */
+.paid {
+  background: linear-gradient(90deg, #10b981, #059669); /* green */
+  color: #06ee82;
+}
+
+/* emphasize with subtle glow */
+.paid {
+  box-shadow: 0 8px 24px rgba(16,185,129,0.12);
+}
+
+.partial {
+  background: linear-gradient(90deg, #f59e0b, #f97316); /* amber */
+  color: #fff;
+}
+
+.unpaid {
+  /* switch unpaid to a clear red to indicate attention */
+  background: linear-gradient(90deg, #ef4444, #dc2626); /* red */
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(220,38,38,0.08);
+}
+
+/* subtle hover scaling for status pills */
+.statusText:hover { transform: translateY(-2px); }
+
+/* row-level helpers (if tr gets these classes) */
+.rowPaid { background: rgba(16,185,129,0.03); }
+.rowUnpaid { background: rgba(239,68,68,0.03); }

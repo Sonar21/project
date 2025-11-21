@@ -5,11 +5,75 @@
   padding: 12px 20px;
   border-bottom: 1px solid #e6e6e9;
   background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  /* subtle shadow so the header stands out when sticky */
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .brand {
   font-weight: 700;
   font-size: 18px;
+}
+
+/* New styled brand (matches LoginForm aesthetic) */
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    #22c55e,
+    #0ea5e9,
+    #6366f1,
+    #22c55e
+  );
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  animation: floatHeader 5s ease-in-out infinite;
+  font-size: 14px;
+}
+
+.brandGradient {
+  font-weight: 700;
+  font-size: 18px;
+  background: linear-gradient(90deg, #0ea5e9, #6366f1 45%, #22c55e 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.02em;
+  animation: floatBrandGradient 5s ease-in-out infinite;
+}
+
+@keyframes floatHeader {
+  0%,
+  100% {
+    transform: translateY(10px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes floatBrandGradient{
+  0%,
+  100% {
+    transform: translateY(5px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 .right {

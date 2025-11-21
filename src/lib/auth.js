@@ -12,13 +12,13 @@ export function useRequireRole(role) {
     if (status === "loading") return;
     const userRole = session?.user?.role;
     if (!userRole) {
-      router.push('/');
+      router.push("/");
       return;
     }
     if (Array.isArray(role)) {
-      if (!role.includes(userRole)) router.push('/');
+      if (!role.includes(userRole)) router.push("/");
     } else {
-      if (userRole !== role) router.push('/');
+      if (userRole !== role) router.push("/");
     }
   }, [status, session, role, router]);
 }

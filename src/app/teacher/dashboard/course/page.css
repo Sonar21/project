@@ -1,0 +1,228 @@
+.courses-page {
+  background: #f6f7fb;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.courses-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.add-btn {
+  background: #4f9dde;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-btn:hover {
+  background: #3d7fc0;
+}
+
+.courses-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.courses-table th,
+.courses-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.courses-table th {
+  background-color: #f0f4fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.view-btn {
+  color: white;
+  background-color: #4f9dde;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  margin-right: 8px;
+}
+
+.view-btn:hover {
+  background-color: #3d7fc0;
+}
+
+.delete-btn {
+  color: white;
+  background-color: #f56565;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background-color: #d94c4c;
+}
+
+/* Modal */
+.add-modal {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.modal-content {
+  background: white;
+  padding: 18px 20px;
+  border-radius: 10px;
+  width: 440px; /* reduced width for more compact modal */
+  max-width: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-content input {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.permonth-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.apply-all-btn {
+  background: #2563eb; /* blue */
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.apply-all-btn:hover {
+  background: #1e40af;
+}
+
+.monthly-templates {
+  margin-top: 8px;
+}
+
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 14px;
+  margin-top: 8px;
+}
+
+.month-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.month-row label {
+  width: 100px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.month-row input {
+  flex: 1;
+  text-align: right; /* amounts aligned right */
+}
+
+@media (max-width: 560px) {
+  .modal-content {
+    width: calc(100% - 24px);
+    padding: 18px;
+  }
+  .months-grid {
+    grid-template-columns: 1fr; /* single column on small screens */
+  }
+  .month-row label {
+    width: 90px;
+  }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.save-btn {
+  background: #4f9dde;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #ccc;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.course-link {
+  text-decoration: none;
+  /* 🔹 removes underline */
+  color: #4f9dde;
+  /* updated: match primary brand blue */
+  font-weight: 600;
+}
+
+.course-link:hover {
+  color: #3d7fc0;
+  /* darker blue on hover */
+  text-decoration: none;
+  /* keep underline off even when hovering */
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.filter-tabs button {
+  background: #f4f4f4;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.filter-tabs button.active {
+  background: #007bff;
+  color: white;
+}
+
+/* (legacy duplicate removed) */

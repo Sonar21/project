@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Students documents: students/{studentId}
+    match /students/{studentId} {
+      // Allow read if the requester is the student themselves, or a teacher
+      allow get, list: if request.auth != null && (
+        request.auth.uid == studentId
+        || request.auth.token.role == 'teacher'
+      );
+      // Allow write only for teachers
+      allow create, update, delete: if request.auth != null && request.auth.token.role == 'teacher';
+    }
+
+    // Courses documents: courses/{courseId}
+    match /courses/{courseId} {
+      // Allow public read for development/testing (temporarily relaxed)
+      allow get, list: if true;
+      // Only teachers can write courses
+      allow create, update, delete: if request.auth != null && request.auth.token.role == 'teacher';
+    }
+
+    // Default: deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

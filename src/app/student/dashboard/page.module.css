@@ -1,0 +1,618 @@
+/* ページコンテナ */
+.container {
+  width: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.tabs {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  gap: 12px;
+  margin: 24px 0 18px;
+  
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  padding: 10px 12px;
+  border-radius: 10px 10px 0 0;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tab:hover {
+  color: var(--accent);
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom: 3px solid var(--accent);
+}
+
+/* active 用の単独クラスをエクスポートしておく（モジュールで扱いやすくするため） */
+.active {
+  color: var(--accent);
+  border-bottom: 3px solid var(--accent);
+}
+
+/* ログアウトボタン */
+.logout {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+}
+.page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  padding: 24px;
+  box-sizing: border-box;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
+  color: #0f172a;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sessionRight {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.userName {
+  font-weight: 600;
+}
+
+.logout {
+  background: transparent;
+  border: 1px solid #e6e6e9;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+}
+
+/* left */
+.leftCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 6px 18px rgba(11, 23, 47, 0.04);
+  width: 100%;
+  align-items: ce;
+}
+
+.progressWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 12px;
+  background: #eef2ff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #2563eb;
+  width: 30%;
+  transition: width 0.45s ease;
+}
+
+.progressText {
+  width: 60px;
+  text-align: right;
+  font-weight: 600;
+  color: #374151;
+}
+
+.amountRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.cardSmall {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f0f6ff;
+  border: 1px solid #eef3ff;
+  text-align: center;
+}
+
+.amount {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.cardLabel {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.infoBox {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff9e6;
+  border: 1px solid #fff0d9;
+  margin-bottom: 16px;
+}
+
+.deadline {
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.primaryBtn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* カード */
+.card {
+  width: 100%;
+  max-width: 980px;
+  background: var(--card);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(30, 41, 59, 0.06);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(15, 23, 42, 0.03);
+}
+
+/* タイトル */
+.title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+/* 進捗バー */
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+/* 進捗の右側パーセント表示 */
+.percent {
+  font-weight: 700;
+}
+
+.progress-wrap {
+  height: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.04),
+    rgba(15, 23, 42, 0.02)
+  );
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(37, 99, 235, 0.95),
+    rgba(37, 99, 235, 0.7)
+  );
+  border-radius: 999px;
+  transition: width 600ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+
+/* 学費ステータス */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.stat {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), var(--glass));
+  padding: 14px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(2, 6, 23, 0.03);
+  border: 1px solid rgba(2, 6, 23, 0.03);
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stat-value {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.stat-value.paid {
+  color: var(--success);
+}
+
+.stat-value.remain {
+  color: var(--warn);
+}
+
+/* 支払い状態用の単体クラス（モジュールで利用するため） */
+.paid {
+  color: var(--success);
+}
+
+.remain {
+  color: var(--warn);
+}
+
+/* 支払い期限 */
+.notice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(250, 244, 224, 0.9),
+    rgba(255, 255, 255, 0.6)
+  );
+  border: 1px solid rgba(241, 245, 249, 0.6);
+}
+
+.notice-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.notice-value {
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.icon {
+  font-size: 22px;
+  opacity: 0.95;
+}
+
+/* レスポンシブ対応 */
+/* @media (max-width: 760px) { */
+
+.tabs {
+  gap: 8px;
+}
+.card {
+  padding: 18px;
+}
+
+.secondaryBtn {
+  background: #f3f4f6;
+  color: #111827;
+  border: 1px solid #e6e6e9;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* right */
+.rightCard {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid #eef2f6;
+  height: fit-content;
+}
+
+.profileBox {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  background: #2563eb;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.profileName {
+  font-weight: 700;
+}
+
+.smallText {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.safeNote {
+  margin-top: 12px;
+  color: #10b981;
+  font-size: 13px;
+}
+
+/* center utility */
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 12px;
+  padding: 20px;
+}
+
+/* 履歴タブ：アップロード行 */
+.upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.amount-input {
+  width: 160px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e6e6e9;
+  background: #fff;
+  font-size: 14px;
+}
+
+.file-input {
+  padding: 6px 0;
+}
+
+.upload-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.upload-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 小さいヘルパーテキスト */
+.hint {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* 支払い履歴テーブル */
+.paymentTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 14px;
+}
+.paymentTable thead th {
+  text-align: left;
+  padding: 10px 12px;
+  background: #fafafa;
+  border-bottom: 1px solid #eef2f6;
+  color: #374151;
+  font-weight: 700;
+}
+.paymentTable tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.paymentTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 支払い状態ラベル */
+.status {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #ffffff;
+}
+/* .paid {
+    background: linear-gradient(90deg, #10b981, #059669);
+  } */
+.unpaid {
+  background: linear-gradient(90deg, #f97316, #fb923c);
+}
+
+/* small controls in table */
+.paymentTable input[type="file"] {
+  display: inline-block;
+  margin-left: 8px;
+}
+.paymentTable button {
+  margin-left: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Desktop / wide screens: make payment rows look like cards */
+.paymentTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 12px;
+  margin-top: 16px;
+  font-size: 15px;
+  table-layout: fixed;
+}
+
+.paymentTable thead th {
+  text-align: left;
+  padding: 12px 18px;
+  color: #374151;
+  font-weight: 700;
+  border-bottom: none;
+}
+
+.paymentTable tbody tr {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(11, 23, 47, 0.05);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.paymentTable tbody tr:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(11, 23, 47, 0.08);
+}
+
+.paymentTable tbody td {
+  padding: 14px 18px;
+  vertical-align: middle;
+  background: #fff;
+}
+
+/* 丸み */
+.paymentTable tbody tr td:first-child {
+  border-radius: 12px 0 0 12px;
+}
+.paymentTable tbody tr td:last-child {
+  border-radius: 0 12px 12px 0;
+}
+
+/* 列整列 */
+.paymentTable tbody td:nth-child(1),
+.paymentTable tbody td:nth-child(2) {
+  color: #6b7280;
+  width: 120px;
+  white-space: nowrap;
+}
+
+.paymentTable tbody td:nth-child(3) {
+  text-align: right;
+  font-weight: 700;
+  color: #0f172a;
+  width: 120px;
+}
+
+.paymentTable tbody td:nth-child(4) {
+  text-align: center;
+  width: 120px;
+}
+
+.paymentTable tbody td:nth-child(5) {
+  text-align: right;
+  width: 260px;
+}
+
+/* ステータス */
+.status {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #ffffff;
+}
+
+/* .paid {
+  background: linear-gradient(90deg, #10b981, #059669);
+} */
+
+/* ファイル・ボタン */
+.paymentTable input[type="file"] {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 13px;
+}
+
+.paymentTable button {
+  
+  margin-left: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: opacity 0.2s ease;
+}
+
+.paymentTable button:hover {
+  opacity: 0.9;
+}
+/* } */

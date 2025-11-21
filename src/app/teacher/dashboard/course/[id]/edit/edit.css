@@ -1,0 +1,165 @@
+.edit-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  background: #f5f7fb;
+  padding: 40px;
+}
+
+.edit-card {
+  background: white;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  padding: 22px 24px;
+}
+
+.edit-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 14px;
+}
+
+.edit-field {
+  margin-bottom: 18px;
+}
+
+.edit-field label {
+  display: block;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+.edit-field input,
+.edit-field select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e6e9ef;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.12s ease-in-out;
+}
+
+.permonth-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.permonth-row input {
+  flex: 1;
+  padding: 8px 10px;
+}
+
+.permonth-row button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.permonth-row button:hover {
+  background: #1e40af;
+}
+
+.monthly-templates {
+  margin-top: 10px;
+}
+
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 12px;
+}
+
+.month-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.month-row label {
+  width: 110px;
+  color: #374151;
+  font-size: 13px;
+}
+
+.month-row input {
+  flex: 1;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .edit-card {
+    padding: 16px 18px;
+  }
+  .months-grid {
+    grid-template-columns: 1fr;
+  }
+  .month-row label {
+    width: 100px;
+  }
+}
+
+.edit-field input:focus,
+.edit-field select:focus {
+  border-color: #0070f3;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  gap: 10px;
+}
+
+.save-btn {
+  background-color: #0070f3;
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background-color: #005ad1;
+}
+
+.delete-btn {
+  background-color: #ff4d4d;
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background-color: #e63939;
+}
+
+.cancel-btn {
+  background-color: #f0f0f0;
+  color: #333;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.cancel-btn:hover {
+  background-color: #e0e0e0;
+}
