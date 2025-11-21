@@ -5,7 +5,12 @@ import { signIn } from "next-auth/react";
 import Image from "next/image";
 import styles from "./LoginForm.module.css";
 
+
 export default function SignInPage() {
+
+
+const SignInPage = () => {
+
   const [loading, setLoading] = useState(false);
 
   const handleGoogle = async () => {
