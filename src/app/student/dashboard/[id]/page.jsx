@@ -700,7 +700,7 @@ export default function StudentDashboardIdPage() {
   <section className={styles.card}>
     <h2>レシートをアップロード</h2>
 
-    <section
+   <section
   style={{
     background: "#fff",
     padding: 30,
@@ -712,7 +712,7 @@ export default function StudentDashboardIdPage() {
     textAlign: "center",
   }}
 >
- 
+
 
   <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
     {/* 月額 */}
@@ -802,6 +802,7 @@ export default function StudentDashboardIdPage() {
     )}
   </div>
 </section>
+
 
   </section>
 )}
