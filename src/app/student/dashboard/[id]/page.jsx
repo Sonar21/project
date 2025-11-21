@@ -57,15 +57,31 @@ export default function StudentDashboardIdPage() {
 
   const handleDiscountChange = async (value) => {
     const v = Number(value) || 0;
-    setDiscount(v);
-    if (!student?.id) return;
+    // optimistic update: update local state immediately so UI reflects change
+    const prevStudentDiscount = student?.discount;
     try {
+      setDiscount(v);
+      setDiscountInput(String(v || ""));
+      if (student && student.id) {
+        setStudent((prev) => (prev ? { ...prev, discount: v } : prev));
+      }
+
+      if (!student?.id) return;
+
       await updateDoc(doc(db, "students", student.id), {
         discount: v,
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
       console.error("Failed to save discount:", err);
+      // rollback local optimistic state
+      setDiscount(Number(prevStudentDiscount) || 0);
+      setDiscountInput(String(prevStudentDiscount || ""));
+      if (student && student.id) {
+        setStudent((prev) =>
+          prev ? { ...prev, discount: prevStudentDiscount } : prev
+        );
+      }
       alert("割引の保存に失敗しました。コンソールを確認してください。");
     }
   };
@@ -513,7 +529,7 @@ export default function StudentDashboardIdPage() {
                     <label
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
-                      割引:
+                      減免:
                       <input
                         type="number"
                         value={discountInput}
