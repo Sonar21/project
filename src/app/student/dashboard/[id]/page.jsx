@@ -21,6 +21,7 @@ import {
 import styles from "./page.module.css";
 import receiptStyles from "@/components/ReceiptList.module.css";
 import PaymentSchedule from "@/components/PaymentSchedule";
+import migrateRemainingToNextYear from "@/lib/migrateYearTuition";
 import { useParams } from "next/navigation";
 
 // This file is a cleaned-up, single-shot-read variant of the student dashboard
@@ -45,6 +46,7 @@ export default function StudentDashboardIdPage() {
   const routeId = params?.id;
   const [discount, setDiscount] = useState(0);
   const [discountInput, setDiscountInput] = useState("");
+  const [migrating, setMigrating] = useState(false);
 
   // sync discount from student doc when it loads
   useEffect(() => {
@@ -83,6 +85,56 @@ export default function StudentDashboardIdPage() {
         );
       }
       alert("割引の保存に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  // Year migration: move unpaid remainder from previous year to next year
+  const handleMigrateYear = async () => {
+    if (!student?.id) return alert("学生情報が見つかりません。");
+    if (
+      !session?.user ||
+      !(session.user.isAdmin || session.user.role === "teacher")
+    ) {
+      return alert("権限がありません。");
+    }
+
+    const confirmed = confirm(
+      "未払い残高を次年度に移行します。実行してよろしいですか？"
+    );
+    if (!confirmed) return;
+
+    // Ask admin for fromYear (default: previous calendar year)
+    const defaultFrom = new Date().getFullYear() - 1;
+    const raw = prompt(
+      `移行元の年を入力してください（例: ${defaultFrom}）。そのままOKすると ${defaultFrom} が使われます。`,
+      String(defaultFrom)
+    );
+    const fromYear = raw ? Number(raw) : defaultFrom;
+    if (!fromYear || Number.isNaN(fromYear))
+      return alert("有効な年を入力してください。");
+
+    try {
+      setMigrating(true);
+      const res = await migrateRemainingToNextYear({
+        studentId: student.id,
+        fromYear,
+        toYear: fromYear + 1,
+      });
+
+      if (res && res.migrated) {
+        alert(
+          `移行が完了しました。${res.addedAmount} 円を ${res.toYear} 年へ追加しました。`
+        );
+        // reload to reflect updated schedules
+        window.location.reload();
+      } else {
+        alert(`移行は行われませんでした: ${res?.reason || "未払い残高なし"}`);
+      }
+    } catch (err) {
+      console.error("migrateYear failed:", err);
+      alert("移行に失敗しました。コンソールを確認してください。");
+    } finally {
+      setMigrating(false);
     }
   };
 
@@ -545,6 +597,18 @@ export default function StudentDashboardIdPage() {
                         type="button"
                       >
                         保存
+                      </button>
+                      <button
+                        className={styles.secondaryBtn}
+                        onClick={handleMigrateYear}
+                        type="button"
+                        disabled={migrating}
+                        title="未払い残を次年度へ移行します"
+                        style={{ marginLeft: 8 }}
+                      >
+                        {migrating
+                          ? "移行中..."
+                          : "年度移行（未払いを次年へ移す）"}
                       </button>
                     </div>
                   </div>
