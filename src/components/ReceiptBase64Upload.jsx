@@ -5,14 +5,14 @@ import {
   collection,
   addDoc,
   serverTimestamp,
-  getDocs,
   query,
   where,
   orderBy,
   limit,
+  onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/firebase/clientApp";
-import Img from "next./image";
+import Img from "next/image";
 
 /**
  * ReceiptBase64Upload
@@ -37,9 +37,8 @@ export default function ReceiptBase64Upload({ studentId, initialMonth }) {
 
   useEffect(() => {
     if (!studentId) return;
-    let mounted = true;
+
     const paymentsRef = collection(db, "payments");
-    // single read with limit to avoid streaming reads; adjust limit as needed
     const q = query(
       paymentsRef,
       where("studentId", "==", studentId),
@@ -47,19 +46,21 @@ export default function ReceiptBase64Upload({ studentId, initialMonth }) {
       limit(50)
     );
 
-    (async () => {
-      try {
-        const snap = await getDocs(q);
-        if (!mounted) return;
+    // Subscribe to payments for this student only. Dependency array is [studentId]
+    // so the subscription won't be duplicated across renders.
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setPayments(data);
-      } catch (err) {
-        console.error("payments getDocs error:", err);
+      },
+      (err) => {
+        console.error("payments onSnapshot error:", err);
       }
-    })();
+    );
 
     return () => {
-      mounted = false;
+      unsubscribe();
     };
   }, [studentId]);
 
@@ -124,7 +125,13 @@ export default function ReceiptBase64Upload({ studentId, initialMonth }) {
       setBase64("");
       setAmount("");
       setMonth(initialMonth || "");
-      // payments listener will reflect the new doc automatically
+      // optimistic local update so the newly uploaded receipt appears immediately
+      const localCopy = {
+        id: docRef.id,
+        ...payload,
+        uploadedAt: new Date(),
+      };
+      setPayments((prev) => [localCopy, ...(prev || [])]);
     } catch (err) {
       console.error("save error:", err);
       setError("保存に失敗しました");
