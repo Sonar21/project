@@ -234,8 +234,8 @@ export default function CoursesPage() {
         <tbody>
           {filteredCourses.map((c, index) => (
             <tr key={c.id}>
-              <td>{index + 1}</td>
-              <td>
+              <td data-label="No">{index + 1}</td>
+              <td data-label="コース名">
                 {/* {c.nameJa && c.nameEn
     ? ${c.nameJa} / ${c.nameEn}
     : c.name || c.nameJa || c.nameEn || c.courseKey || c.id} */}
@@ -248,17 +248,18 @@ export default function CoursesPage() {
                     : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
                 </Link>
               </td>
-              <td>{c.fee}</td>
-              <td>
+              <td data-label="学費">{c.fee}</td>
+              <td data-label="月額">
                 {c.pricePerMonth
                   ? `¥${Number(c.pricePerMonth).toLocaleString()}`
                   : c.permonth
                   ? c.permonth
                   : "-"}
               </td>
+
               <td>{c.students ?? 0}</td>
               <td>{c.year}</td>
-              <td>
+              
                 <Link
                   // href={`/teacher/dashboard/course/${c.courseKey ?? c.id}/edit`}
                   href={`/teacher/dashboard/course/${c.id}/edit`}
@@ -272,6 +273,28 @@ export default function CoursesPage() {
                 >
                   削除
                 </button>
+
+              <td data-label="学生数">{c.students ?? 0}</td>
+              <td data-label="学年">{c.year}</td>
+              <td data-label="操作">
+                <div className="actionsWrap">
+                  {/* <span className="actionsLabel">操作</span> */}
+                  <div className="actionsButtons">
+                    <Link
+                      href={`/teacher/dashboard/course/${c.id}/edit`}
+                      className="view-btn"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleDeleteCourse(c.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
               </td>
             </tr>
           ))}

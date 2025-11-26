@@ -1,7 +1,8 @@
 .homeContainer {
   /* Fill the available space below the header without triggering body scroll */
   flex: 1 1 auto;
-  overflow: hidden;
+  /* Avoid clipping vertical overflow (e.g. very small phones) while still preventing horizontal scroll */
+  overflow-x: hidden;
 
   display: flex;
   flex-direction: column;
@@ -100,4 +101,19 @@
   display: grid;
   place-items: center;
   min-height: 0; /* prevent grid from forcing overflow */
+}
+
+/* Additional mobile refinements */
+@media (max-width: 640px) {
+  .homeContainer {
+    padding: 0 20px;
+  }
+}
+@media (max-width: 480px) {
+  .homeContainer {
+    padding: 0 16px;
+  }
+  .homeTitle {
+    font-size: clamp(1.9rem, 8vw, 2.4rem);
+  }
 }

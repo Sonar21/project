@@ -12,6 +12,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/firebase/clientApp";
+import "./page.css";
 
 export default function TeacherPaymentsPage() {
   const [payments, setPayments] = useState([]);
@@ -58,11 +59,6 @@ export default function TeacherPaymentsPage() {
     "12月",
   ];
   const monthMax = Math.max(...monthlyTotals) || 1;
-  // Chart sizing controls (defaults slightly larger)
-  const [chartHeight, setChartHeight] = useState(260);
-  const [barWidth, setBarWidth] = useState(36);
-  const [columnWidth, setColumnWidth] = useState(80);
-  const barMax = Math.max(20, chartHeight - 80);
 
   // Aggregate payments totals per course
   useEffect(() => {
@@ -157,37 +153,19 @@ export default function TeacherPaymentsPage() {
   };
 
   return (
-    <main style={{ padding: 20 }}>
-      <h1>支払金 - 全ての支払い</h1>
-      {loading && <div>読み込み中…</div>}
+    <main className="paymentPage">
+      <h1 className="pageTitle">支払金 - 全ての支払い</h1>
+      {loading && <div className="loading">読み込み中…</div>}
 
       {/* Course aggregates */}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          marginTop: 12,
-          alignItems: "center",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className="statsRow">
         {Object.keys(courseTotals).length === 0 ? (
-          <div style={{ color: "#666" }}>集計中...</div>
+          <div className="muted">集計中...</div>
         ) : (
           Object.entries(courseTotals).map(([courseKey, amt]) => (
-            <div
-              key={courseKey}
-              style={{
-                padding: 12,
-                background: "#fff",
-                borderRadius: 8,
-                boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-              }}
-            >
-              <div style={{ fontSize: 12, color: "#666" }}>
-                {courseKey} 合計支払額
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 600 }}>
+            <div key={courseKey} className="statCard">
+              <div className="statLabel">{courseKey} 合計支払額</div>
+              <div className="statValue">
                 ¥{Number(amt || 0).toLocaleString()}
               </div>
             </div>
@@ -196,17 +174,15 @@ export default function TeacherPaymentsPage() {
       </div>
 
       {/* Monthly bar chart */}
-      <div style={{ marginTop: 12 }}>
-        <h2 style={{ margin: 0, marginBottom: 8, fontSize: 16 }}>
-          月別支払い合計
-        </h2>
-        {/* course selector */}
-        <div style={{ marginTop: 8, marginBottom: 8 }}>
-          <label style={{ marginRight: 8 }}>コース:</label>
+      <section className="chartSection">
+        <h2 className="sectionTitle">月別支払い合計</h2>
+        <div className="filterRow">
+          <label htmlFor="courseSelect">コース:</label>
           <select
+            id="courseSelect"
+            className="courseSelect"
             value={selectedCourse}
             onChange={(e) => setSelectedCourse(e.target.value)}
-            style={{ padding: "6px 8px", borderRadius: 6 }}
           >
             <option value="all">全てのコース</option>
             {Object.keys(courseTotals).map((c) => (
@@ -216,54 +192,29 @@ export default function TeacherPaymentsPage() {
             ))}
           </select>
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            alignItems: "end",
-            height: 180,
-            padding: "8px 4px",
-            borderRadius: 8,
-            background: "#fafafa",
-          }}
-        >
-          {monthlyTotals.map((amt, i) => {
-            const h = Math.round((amt / monthMax) * 140);
-            const isMax = amt === monthMax && monthMax > 0;
-            return (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  width: 56,
-                }}
-              >
-                <div
-                  title={`¥${Number(amt || 0).toLocaleString()}`}
-                  style={{
-                    width: 28,
-                    height: Math.max(6, h),
-                    background: isMax ? "#1d4ed8" : "#60a5fa",
-                    borderRadius: 6,
-                    transition: "height 300ms ease",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    justifyContent: "center",
-                  }}
-                />
-                <div style={{ fontSize: 12, marginTop: 8 }}>
-                  {monthLabels[i]}
+
+        <div className="chartScroll">
+          <div className="bars">
+            {monthlyTotals.map((amt, i) => {
+              const h = Math.round((amt / monthMax) * 140);
+              const isMax = amt === monthMax && monthMax > 0;
+              return (
+                <div key={i} className="barCol">
+                  <div
+                    title={`¥${Number(amt || 0).toLocaleString()}`}
+                    className={`bar ${isMax ? "barMax" : ""}`}
+                    style={{ height: Math.max(6, h) }}
+                  />
+                  <div className="barMonth">{monthLabels[i]}</div>
+                  <div className="barAmt">
+                    ¥{Number(amt || 0).toLocaleString()}
+                  </div>
                 </div>
-                <div style={{ fontSize: 12, color: "#444" }}>
-                  ¥{Number(amt || 0).toLocaleString()}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

@@ -2,6 +2,10 @@
   background: #f6f7fb;
   padding: 20px;
   border-radius: 10px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto; /* center content on wide screens */
+  box-sizing: border-box;
 }
 
 .courses-header {
@@ -44,16 +48,21 @@
   background-color: #f0f4fa;
   font-weight: 600;
   color: #333;
+  /* Sticky header */
+  position: sticky;
+  top: 0;
+  z-index: 2; /* keep above table cells while scrolling */
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
 .view-btn {
   color: white;
   background-color: #4f9dde;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 10px; /* smaller uniform padding */
   border-radius: 6px;
   text-decoration: none;
-  margin-right: 8px;
+  margin-right: 0; /* remove extra spacing, we use flex gap */
 }
 
 .view-btn:hover {
@@ -64,13 +73,40 @@
   color: white;
   background-color: #f56565;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 10px; /* match edit */
   border-radius: 6px;
   cursor: pointer;
 }
 
 .delete-btn:hover {
   background-color: #d94c4c;
+}
+
+/* Make the action buttons equal width in the last column */
+.courses-table td:last-child {
+  /* actionsWrap handles layout now */
+  padding: 8px 15px; /* slightly tighter since we nest elements */
+}
+/* New structured action area */
+.actionsWrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.actionsLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+.actionsButtons {
+  display: flex;
+  gap: 6px;
+}
+.actionsButtons .view-btn,
+.actionsButtons .delete-btn {
+  flex: 1 1 0;
+  text-align: center;
 }
 
 /* Modal */
@@ -153,7 +189,8 @@
   text-align: right; /* amounts aligned right */
 }
 
-@media (max-width: 560px) {
+/* Card layout only for very narrow phones; keep header visible on typical modern devices (~430px). */
+@media (max-width: 400px) {
   .modal-content {
     width: calc(100% - 24px);
     padding: 18px;
@@ -225,4 +262,116 @@
   color: white;
 }
 
-/* (legacy duplicate removed) */
+
+.course-link:hover {
+  color: #0051a3; /* darker color on hover */
+  text-decoration: none; /* keep underline off even when hovering */
+}
+
+/* ---------------------------------------------
+   Responsive enhancements
+   --------------------------------------------- */
+@media (max-width: 880px) {
+  .courses-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .add-btn {
+    order: 2;
+  }
+}
+
+@media (max-width: 780px) {
+  .courses-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .add-btn {
+    width: 100%;
+  }
+}
+
+/* Allow horizontal scrolling instead of squishing columns */
+@media (max-width: 680px) {
+  .courses-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-radius: 10px;
+  }
+  .courses-table th,
+  .courses-table td {
+    white-space: nowrap;
+  }
+}
+
+/* Card-style transformation for very small screens.
+   Requires adding data-label attributes to <td> with the header text, e.g.
+   <td data-label="Course Name">Math 101</td> for accessibility & clarity. */
+@media (max-width: 560px) {
+  .courses-table,
+  .courses-table thead,
+  .courses-table tbody,
+  .courses-table th,
+  .courses-table td,
+  .courses-table tr {
+    display: block;
+  }
+  .courses-table {
+    padding: 0;
+    white-space: normal;
+    overflow: visible;
+  }
+  .courses-table thead {
+    display: none;
+  }
+  .courses-table tr {
+    background: #fff;
+    margin: 0 0 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  }
+  .courses-table td {
+    border: none;
+    padding: 8px 16px;
+    position: relative;
+  }
+  .courses-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 2px;
+    letter-spacing: 0.02em;
+  }
+  /* Keep buttons equal width within the card row */
+  .actionsButtons {
+    gap: 6px;
+  }
+  .actionsButtons .view-btn,
+  .actionsButtons .delete-btn {
+    flex: 1 1 0;
+    margin: 4px 0 0 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .courses-page {
+    padding: 16px;
+  }
+  .add-btn {
+    font-size: 13px;
+    padding: 10px 14px;
+  }
+  .view-btn,
+  .delete-btn {
+    width: 100%;
+    margin-right: 0;
+  }
+  .modal-content {
+    width: calc(100% - 20px);
+  }
+}
+
