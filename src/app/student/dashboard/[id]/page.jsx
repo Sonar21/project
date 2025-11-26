@@ -595,7 +595,7 @@ export default function StudentDashboardIdPage() {
           }`}
           onClick={() => setActiveTab("profile")}
         >
-          プロフィール 
+          プロフィール
         </button>
       </header>
 
@@ -621,7 +621,14 @@ export default function StudentDashboardIdPage() {
                 </span>
               </div>
 
-              <div style={{ display: "flex", marginBottom: 12, alignItems: "center", gap: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  marginBottom: 12,
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
                 <div style={{ flex: 1 }}>
                   {session?.user &&
                   (session.user.isAdmin || session.user.role === "teacher") ? (
@@ -1064,13 +1071,17 @@ export default function StudentDashboardIdPage() {
 
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2>プロフィール</h2>
+          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
           <div
             style={{
               padding: 12,
               border: "1px solid #eee",
               borderRadius: 8,
               background: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
             }}
           >
             <p style={{ margin: "6px 0" }}>

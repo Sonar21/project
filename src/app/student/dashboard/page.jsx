@@ -1065,72 +1065,128 @@ export default function StudentDashboardPage() {
       {activeTab === "upload" && (
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
-          <div
+
+          <section
             style={{
-              marginTop: 4,
-              padding: 12,
-              border: "1px solid #eee",
-              borderRadius: 8,
               background: "#fff",
+              padding: 30,
+              borderRadius: 16,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              margin: "20px auto",
+              width: "100%",
+              maxWidth: 600,
+              textAlign: "center",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <label>
-                金額:
+            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+              {/* 月額 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  月額
+                </label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <label>
-                対象月:
+              {/* 対象月 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  対象月
+                </label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <label>
-                ファイル:
+              {/* ファイル */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  ファイル
+                </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <button
-                onClick={() => handleReceiptUpload(receiptMonth || undefined)}
-                disabled={uploading}
+              {/* Centered Button */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: 10,
+                }}
               >
-                {uploading ? "アップロード中..." : "OK"}
-              </button>
+                <button
+                  onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                  disabled={uploading}
+                  style={{
+                    padding: "12px 0",
+                    width: "50%",
+                    maxWidth: 250,
+                    background: "#0070F3",
+                    color: "#fff",
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  {uploading ? "アップロード中..." : "OK"}
+                </button>
+              </div>
+
               {uploading && (
-                <div style={{ marginLeft: 8 }}>進捗: {uploadProgress}%</div>
+                <div
+                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
+                >
+                  進捗: {uploadProgress}%
+                </div>
               )}
             </div>
-          </div>
+          </section>
         </section>
       )}
 
       {/* 🔹 プロフィールタブ */}
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2>プロフィール</h2>
+          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
 
           <div
             style={{
@@ -1138,6 +1194,10 @@ export default function StudentDashboardPage() {
               border: "1px solid #eee",
               borderRadius: 8,
               background: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
             }}
           >
             <p style={{ margin: "6px 0" }}>
