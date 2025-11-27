@@ -598,18 +598,7 @@ export default function StudentDashboardIdPage() {
                       >
                         保存
                       </button>
-                      <button
-                        className={styles.secondaryBtn}
-                        onClick={handleMigrateYear}
-                        type="button"
-                        disabled={migrating}
-                        title="未払い残を次年度へ移行します"
-                        style={{ marginLeft: 8 }}
-                      >
-                        {migrating
-                          ? "移行中..."
-                          : "年度移行（未払いを次年へ移す）"}
-                      </button>
+                      {/* 年度移行ボタンを削除しました */}
                     </div>
                   </div>
                 ) : (
