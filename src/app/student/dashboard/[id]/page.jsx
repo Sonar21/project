@@ -47,6 +47,7 @@ export default function StudentDashboardIdPage() {
   const [discount, setDiscount] = useState(0);
   const [discountInput, setDiscountInput] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  const [discountError, setDiscountError] = useState("");
   const [migrating, setMigrating] = useState(false);
 
   // sync discount from student doc when it loads
@@ -109,6 +110,32 @@ export default function StudentDashboardIdPage() {
       }
       alert("割引の保存に失敗しました。コンソールを確認してください。");
     }
+  };
+
+  // Wrapper to validate both fields before saving
+  const saveDiscount = async () => {
+    setDiscountError("");
+    const reason = String(discountReason || "").trim();
+    const amountRaw = String(discountInput || "").trim();
+    if (!reason) {
+      setDiscountError("割引理由を入力してください。");
+      return;
+    }
+    if (!amountRaw) {
+      setDiscountError("減免金額を入力してください。");
+      return;
+    }
+    const n = Number(amountRaw);
+    if (!Number.isFinite(n) || n <= 0) {
+      setDiscountError(
+        "有効な減免金額を入力してください（0 より大きい数値）。"
+      );
+      return;
+    }
+
+    // call existing handler which performs optimistic update and saves to Firestore
+    await handleDiscountChange(amountRaw);
+    setDiscountError("");
   };
 
   // Year migration: move unpaid remainder from previous year to next year
@@ -534,7 +561,7 @@ export default function StudentDashboardIdPage() {
   const rawCourseName =
     courseInfo?.name ??
     student?.courseId ??
-    session.user.courseName ??
+    session?.user?.courseName ??
     "未設定";
   const hasJapanese = /[\u3040-\u30ff\u4e00-\u9faf]/.test(
     String(rawCourseName)
@@ -671,6 +698,11 @@ export default function StudentDashboardIdPage() {
                           }}
                         />
                       </label>
+                      {discountError && (
+                        <div style={{ color: "#ef4444", marginTop: 8 }}>
+                          {discountError}
+                        </div>
+                      )}
                       <label
                         style={{
                           display: "flex",
@@ -738,7 +770,7 @@ export default function StudentDashboardIdPage() {
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
                     className={styles.primaryBtn}
-                    onClick={() => handleDiscountChange(discountInput)}
+                    onClick={saveDiscount}
                     type="button"
                     style={{
                       padding: "8px 12px",
@@ -1085,9 +1117,9 @@ export default function StudentDashboardIdPage() {
             }}
           >
             <p style={{ margin: "6px 0" }}>
-              名前: {student?.name || session.user.name}
+              名前: {student?.name || session?.user?.name}
             </p>
-            <p style={{ margin: "6px 0" }}>メール: {session.user.email}</p>
+            <p style={{ margin: "6px 0" }}>メール: {session?.user?.email}</p>
             <p style={{ margin: "6px 0" }}>
               学籍番号: {student?.studentId || "未登録"}
             </p>
