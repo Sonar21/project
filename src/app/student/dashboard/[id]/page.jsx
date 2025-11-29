@@ -17,6 +17,7 @@ import {
   getDocs,
   getDoc,
   deleteDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import styles from "./page.module.css";
 import receiptStyles from "@/components/ReceiptList.module.css";
@@ -44,71 +45,94 @@ export default function StudentDashboardIdPage() {
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const params = useParams();
   const routeId = params?.id;
-  const [discount, setDiscount] = useState(0);
-  const [discountInput, setDiscountInput] = useState("");
-  const [discountReason, setDiscountReason] = useState("");
+  // const [discount, setDiscount] = useState(0);
+  // const [discountInput, setDiscountInput] = useState("");
+  // const [discountReason, setDiscountReason] = useState("");
+  // const [discountEntries, setDiscountEntries] = useState([]);
+  const [editingId, setEditingId] = useState(null);
+const [editDiscountInput, setEditDiscountInput] = useState("");
+const [editReasonInput, setEditReasonInput] = useState("");
+const [editingLoading, setEditingLoading] = useState(false);
+const [editingError, setEditingError] = useState("");
   const [discountError, setDiscountError] = useState("");
   const [migrating, setMigrating] = useState(false);
 
-  // sync discount from student doc when it loads
+  // subscribe to discounts subcollection and fall back to legacy fields
   useEffect(() => {
-    if (student && typeof student.discount !== "undefined") {
-      const v = Number(student.discount) || 0;
-      setDiscount(v);
-      setDiscountInput(String(v || ""));
-      setDiscountReason(student.discountReason || "");
+    if (!student?.id) return;
+    const discountsCol = collection(db, "students", student.id, "discounts");
+    const q = query(discountsCol, orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snap) => {
+      const entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setDiscountEntries(entries);
+      const total = entries.reduce(
+        (acc, e) => acc + (Number(e.amount) || 0),
+        0
+      );
+      setDiscount(total);
+      setDiscountInput(String(total || ""));
+    });
+
+    // if there are no subcollection entries, fall back to legacy student fields
+    if (!Array.isArray(student.discounts) || student.discounts.length === 0) {
+      if (typeof student.discount !== "undefined") {
+        const v = Number(student.discount) || 0;
+        setDiscount(v);
+        setDiscountInput(String(v || ""));
+        setDiscountReason(student.discountReason || "");
+      }
     }
-  }, [student]);
+
+    return () => unsub();
+  }, [student?.id]);
 
   const handleDiscountChange = async (value) => {
     const v = Number(value) || 0;
-    // optimistic update: update local state immediately so UI reflects change
-    const prevStudentDiscount = student?.discount;
-    const prevReason = student?.discountReason;
+    setDiscount(v);
+    setDiscountInput(String(v || ""));
+
+    if (!student?.id) return;
+
+    const actor = session?.user?.email || session?.user?.name || null;
     try {
-      setDiscount(v);
-      setDiscountInput(String(v || ""));
-      if (student && student.id) {
-        setStudent((prev) => (prev ? { ...prev, discount: v } : prev));
-      }
-
-      if (!student?.id) return;
-
-      const actor = session?.user?.email || session?.user?.name || null;
-      await updateDoc(doc(db, "students", student.id), {
-        discount: v,
-        discountReason: discountReason || null,
-        discountReasonBy: actor,
-        discountReasonAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      const discountsCol = collection(db, "students", student.id, "discounts");
+      const docRef = await addDoc(discountsCol, {
+        amount: v,
+        reason: discountReason || null,
+        by: actor,
+        createdAt: serverTimestamp(),
       });
 
-      // update local student state to reflect saved reason and metadata
-      setStudent((s) => ({
-        ...(s || {}),
-        discount: v,
-        discountReason: discountReason || null,
-        discountReasonBy: actor,
-        discountReasonAt: new Date(),
-      }));
+      // optimistic local entry so UI updates immediately while onSnapshot reflects final state
+      const localEntry = {
+        id: docRef.id,
+        amount: v,
+        reason: discountReason || null,
+        by: actor,
+        createdAt: new Date(),
+      };
+      setDiscountEntries((prev) => [localEntry, ...(prev || [])]);
     } catch (err) {
       console.error("Failed to save discount:", err);
-      // rollback local optimistic state
-      setDiscount(Number(prevStudentDiscount) || 0);
-      setDiscountInput(String(prevStudentDiscount || ""));
-      setDiscountReason(prevReason || "");
-      if (student && student.id) {
-        setStudent((prev) =>
-          prev
-            ? {
-                ...prev,
-                discount: prevStudentDiscount,
-                discountReason: prevReason,
-              }
-            : prev
-        );
-      }
+      setDiscount(0);
+      setDiscountInput("");
       alert("割引の保存に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  // delete a discount entry from the discounts subcollection
+  const deleteDiscountEntry = async (entryId) => {
+    if (!student?.id || !entryId) return;
+    const ok = confirm("この割引エントリを削除します。よろしいですか？");
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, "students", student.id, "discounts", entryId));
+      setDiscountEntries((prev) =>
+        (prev || []).filter((e) => e.id !== entryId)
+      );
+    } catch (err) {
+      console.error("Failed to delete discount entry:", err);
+      alert("割引エントリの削除に失敗しました。コンソールを確認してください。");
     }
   };
 
@@ -136,6 +160,32 @@ export default function StudentDashboardIdPage() {
     // call existing handler which performs optimistic update and saves to Firestore
     await handleDiscountChange(amountRaw);
     setDiscountError("");
+  };
+
+  const deleteDiscount = async () => {
+    if (!student || !student.id) return;
+    const ok = confirm("割引情報を削除します。よろしいですか？");
+    if (!ok) return;
+    try {
+      // clear fields in Firestore
+      await updateDoc(doc(db, "students", student.id), {
+        discount: 0,
+        discountReason: null,
+        discountReasonBy: null,
+        discountReasonAt: null,
+        updatedAt: serverTimestamp(),
+      });
+      // clear local state
+      setDiscount(0);
+      setDiscountInput("");
+      setDiscountReason("");
+      setStudent((s) => (s ? { ...s, discount: 0, discountReason: null } : s));
+      setDiscountError("");
+      alert("割引情報を削除しました。");
+    } catch (err) {
+      console.error("Failed to delete discount:", err);
+      alert("割引情報の削除に失敗しました。コンソールを確認してください。");
+    }
   };
 
   // Year migration: move unpaid remainder from previous year to next year
@@ -187,7 +237,68 @@ export default function StudentDashboardIdPage() {
       setMigrating(false);
     }
   };
+const updateDiscountEntry = async (entryId) => {
+  if (!student?.id || !entryId) return;
 
+  // Start editing mode with current values if not already
+  if (editingId !== entryId) {
+    const entry = discountEntries.find((it) => it.id === entryId);
+    if (!entry) return alert("エントリが見つかりません。");
+    setEditingId(entryId);
+    setEditDiscountInput(String(entry.discount ?? ""));
+    setEditReasonInput(String(entry.reason ?? ""));
+    setEditingError("");
+    return;
+  }
+
+  // Save action when already editing this id
+  const newReason = String(editReasonInput || "").trim();
+  const newDiscount = Number(editDiscountInput);
+  if (!newReason) {
+    setEditingError("割引理由を入力してください（数字不可）。");
+    return;
+  }
+  if (/\d/.test(newReason)) {
+    setEditingError("割引理由に数字は入力できません。");
+    return;
+  }
+  if (!Number.isFinite(newDiscount) || newDiscount < 0 || newDiscount > 100) {
+    setEditingError("割引は 0〜100 の範囲で入力してください。");
+    return;
+  }
+
+  try {
+    setEditingLoading(true);
+    await updateDoc(
+      doc(db, "students", student.id, "discounts", entryId),
+      {
+        discount: newDiscount,
+        reason: newReason,
+        updatedAt: serverTimestamp(),
+      }
+    );
+
+    // optimistic local update
+    setDiscountEntries((prev) =>
+      (prev || []).map((it) =>
+        it.id === entryId
+          ? { ...it, discount: newDiscount, reason: newReason, updatedAt: new Date() }
+          : it
+      )
+    );
+
+    // exit edit mode
+    setEditingId(null);
+    setEditDiscountInput("");
+    setEditReasonInput("");
+    setEditingError("");
+  } catch (err) {
+    console.error("Failed to update discount entry:", err);
+    setEditingError("更新に失敗しました。コンソールを確認してください。");
+  } finally {
+    setEditingLoading(false);
+  }
+};
   const handleReceiptUpload = async (targetMonth) => {
     if (!file || !student) return alert("ファイルを選択してください。");
     const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
@@ -511,7 +622,15 @@ export default function StudentDashboardIdPage() {
       student?.totalFees ??
       0
   );
-  const appliedDiscount = Number(student?.discount ?? discount) || 0;
+  const appliedDiscount = (() => {
+    if (Array.isArray(student?.discounts) && student.discounts.length > 0) {
+      return student.discounts.reduce(
+        (s, it) => s + (Number(it?.amount) || Number(it) || 0),
+        0
+      );
+    }
+    return Number(student?.discount ?? discount) || 0;
+  })();
   const total = Math.max(baseTotal - appliedDiscount, 0);
   const paidFromPayments = payments.reduce(
     (sum, p) => sum + (Number(p.amount) || 0),
@@ -785,6 +904,20 @@ export default function StudentDashboardIdPage() {
                   </button>
                   <button
                     className={styles.secondaryBtn}
+                    onClick={deleteDiscount}
+                    type="button"
+                    title="割引情報を削除"
+                    style={{
+                      marginLeft: 8,
+                      background: "#fff",
+                      color: "#ef4444",
+                      border: "1px solid #fee2e2",
+                    }}
+                  >
+                    削除
+                  </button>
+                  <button
+                    className={styles.secondaryBtn}
                     onClick={handleMigrateYear}
                     type="button"
                     disabled={migrating}
@@ -833,6 +966,76 @@ export default function StudentDashboardIdPage() {
               ) : null}
             </div>
           )}
+          {discountEntries.map((e) => (
+  <li
+    key={e.id}
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "8px 12px",
+      borderRadius: 8,
+      background: "#fff",
+      marginBottom: 8,
+      border: "1px solid #eef2f3",
+    }}
+  >
+    <div style={{ flex: 1 }}>
+      {editingId === e.id ? (
+        <>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={editDiscountInput}
+              onChange={(ev) => setEditDiscountInput(ev.target.value)}
+              style={{ width: 90, padding: "6px 8px", borderRadius: 6 }}
+            />
+            <input
+              type="text"
+              value={editReasonInput}
+              onChange={(ev) => setEditReasonInput(ev.target.value)}
+              placeholder="理由（数字不可）"
+              style={{ flex: 1, padding: "6px 8px", borderRadius: 6 }}
+            />
+          </div>
+          {editingError && <div style={{ color: "#ef4444", marginTop: 6 }}>{editingError}</div>}
+          <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+            <button className={styles.primaryBtn} onClick={() => updateDiscountEntry(e.id)} disabled={editingLoading}>
+              {editingLoading ? "保存中..." : "保存"}
+            </button>
+            <button
+              className={styles.secondaryBtn}
+              onClick={() => {
+                setEditingId(null);
+                setEditDiscountInput("");
+                setEditReasonInput("");
+                setEditingError("");
+              }}
+            >
+              キャンセル
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ fontWeight: 700 }}>{Number(e.discount).toLocaleString()}% ・ {e.reason}</div>
+          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+            作成: {formatTimestamp(e.createdAt)}{e.updatedAt ? ` ・ 更新: ${formatTimestamp(e.updatedAt)}` : ""}
+          </div>
+        </>
+      )}
+    </div>
+
+    {editingId !== e.id && (
+      <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+        <button className={styles.secondaryBtn} onClick={() => updateDiscountEntry(e.id)}>編集</button>
+        <button className={styles.secondaryBtn} onClick={() => deleteDiscountEntry(e.id)} style={{ color: "#ef4444" }}>削除</button>
+      </div>
+    )}
+  </li>
+))}
 
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
