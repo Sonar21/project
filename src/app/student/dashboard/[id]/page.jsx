@@ -45,148 +45,19 @@ export default function StudentDashboardIdPage() {
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const params = useParams();
   const routeId = params?.id;
-  // const [discount, setDiscount] = useState(0);
-  // const [discountInput, setDiscountInput] = useState("");
-  // const [discountReason, setDiscountReason] = useState("");
-  // const [discountEntries, setDiscountEntries] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-const [editDiscountInput, setEditDiscountInput] = useState("");
-const [editReasonInput, setEditReasonInput] = useState("");
-const [editingLoading, setEditingLoading] = useState(false);
-const [editingError, setEditingError] = useState("");
-  const [discountError, setDiscountError] = useState("");
   const [migrating, setMigrating] = useState(false);
 
-  // subscribe to discounts subcollection and fall back to legacy fields
-  useEffect(() => {
-    if (!student?.id) return;
-    const discountsCol = collection(db, "students", student.id, "discounts");
-    const q = query(discountsCol, orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      const entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setDiscountEntries(entries);
-      const total = entries.reduce(
-        (acc, e) => acc + (Number(e.amount) || 0),
-        0
-      );
-      setDiscount(total);
-      setDiscountInput(String(total || ""));
-    });
+  // New discount system states
+  const [discounts, setDiscounts] = useState([]); // realtime list of discount docs
+  const [newReason, setNewReason] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [editingId, setEditingId] = useState(null);
 
-    // if there are no subcollection entries, fall back to legacy student fields
-    if (!Array.isArray(student.discounts) || student.discounts.length === 0) {
-      if (typeof student.discount !== "undefined") {
-        const v = Number(student.discount) || 0;
-        setDiscount(v);
-        setDiscountInput(String(v || ""));
-        setDiscountReason(student.discountReason || "");
-      }
-    }
-
-    return () => unsub();
-  }, [student?.id]);
-
-  const handleDiscountChange = async (value) => {
-    const v = Number(value) || 0;
-    setDiscount(v);
-    setDiscountInput(String(v || ""));
-
-    if (!student?.id) return;
-
-    const actor = session?.user?.email || session?.user?.name || null;
-    try {
-      const discountsCol = collection(db, "students", student.id, "discounts");
-      const docRef = await addDoc(discountsCol, {
-        amount: v,
-        reason: discountReason || null,
-        by: actor,
-        createdAt: serverTimestamp(),
-      });
-
-      // optimistic local entry so UI updates immediately while onSnapshot reflects final state
-      const localEntry = {
-        id: docRef.id,
-        amount: v,
-        reason: discountReason || null,
-        by: actor,
-        createdAt: new Date(),
-      };
-      setDiscountEntries((prev) => [localEntry, ...(prev || [])]);
-    } catch (err) {
-      console.error("Failed to save discount:", err);
-      setDiscount(0);
-      setDiscountInput("");
-      alert("割引の保存に失敗しました。コンソールを確認してください。");
-    }
-  };
-
-  // delete a discount entry from the discounts subcollection
-  const deleteDiscountEntry = async (entryId) => {
-    if (!student?.id || !entryId) return;
-    const ok = confirm("この割引エントリを削除します。よろしいですか？");
-    if (!ok) return;
-    try {
-      await deleteDoc(doc(db, "students", student.id, "discounts", entryId));
-      setDiscountEntries((prev) =>
-        (prev || []).filter((e) => e.id !== entryId)
-      );
-    } catch (err) {
-      console.error("Failed to delete discount entry:", err);
-      alert("割引エントリの削除に失敗しました。コンソールを確認してください。");
-    }
-  };
-
-  // Wrapper to validate both fields before saving
-  const saveDiscount = async () => {
-    setDiscountError("");
-    const reason = String(discountReason || "").trim();
-    const amountRaw = String(discountInput || "").trim();
-    if (!reason) {
-      setDiscountError("割引理由を入力してください。");
-      return;
-    }
-    if (!amountRaw) {
-      setDiscountError("減免金額を入力してください。");
-      return;
-    }
-    const n = Number(amountRaw);
-    if (!Number.isFinite(n) || n <= 0) {
-      setDiscountError(
-        "有効な減免金額を入力してください（0 より大きい数値）。"
-      );
-      return;
-    }
-
-    // call existing handler which performs optimistic update and saves to Firestore
-    await handleDiscountChange(amountRaw);
-    setDiscountError("");
-  };
-
-  const deleteDiscount = async () => {
-    if (!student || !student.id) return;
-    const ok = confirm("割引情報を削除します。よろしいですか？");
-    if (!ok) return;
-    try {
-      // clear fields in Firestore
-      await updateDoc(doc(db, "students", student.id), {
-        discount: 0,
-        discountReason: null,
-        discountReasonBy: null,
-        discountReasonAt: null,
-        updatedAt: serverTimestamp(),
-      });
-      // clear local state
-      setDiscount(0);
-      setDiscountInput("");
-      setDiscountReason("");
-      setStudent((s) => (s ? { ...s, discount: 0, discountReason: null } : s));
-      setDiscountError("");
-      alert("割引情報を削除しました。");
-    } catch (err) {
-      console.error("Failed to delete discount:", err);
-      alert("割引情報の削除に失敗しました。コンソールを確認してください。");
-    }
-  };
+  // Modal edit states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editReason, setEditReason] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDiscountId, setEditDiscountId] = useState(null);
 
   // Year migration: move unpaid remainder from previous year to next year
   const handleMigrateYear = async () => {
@@ -237,68 +108,7 @@ const [editingError, setEditingError] = useState("");
       setMigrating(false);
     }
   };
-const updateDiscountEntry = async (entryId) => {
-  if (!student?.id || !entryId) return;
 
-  // Start editing mode with current values if not already
-  if (editingId !== entryId) {
-    const entry = discountEntries.find((it) => it.id === entryId);
-    if (!entry) return alert("エントリが見つかりません。");
-    setEditingId(entryId);
-    setEditDiscountInput(String(entry.discount ?? ""));
-    setEditReasonInput(String(entry.reason ?? ""));
-    setEditingError("");
-    return;
-  }
-
-  // Save action when already editing this id
-  const newReason = String(editReasonInput || "").trim();
-  const newDiscount = Number(editDiscountInput);
-  if (!newReason) {
-    setEditingError("割引理由を入力してください（数字不可）。");
-    return;
-  }
-  if (/\d/.test(newReason)) {
-    setEditingError("割引理由に数字は入力できません。");
-    return;
-  }
-  if (!Number.isFinite(newDiscount) || newDiscount < 0 || newDiscount > 100) {
-    setEditingError("割引は 0〜100 の範囲で入力してください。");
-    return;
-  }
-
-  try {
-    setEditingLoading(true);
-    await updateDoc(
-      doc(db, "students", student.id, "discounts", entryId),
-      {
-        discount: newDiscount,
-        reason: newReason,
-        updatedAt: serverTimestamp(),
-      }
-    );
-
-    // optimistic local update
-    setDiscountEntries((prev) =>
-      (prev || []).map((it) =>
-        it.id === entryId
-          ? { ...it, discount: newDiscount, reason: newReason, updatedAt: new Date() }
-          : it
-      )
-    );
-
-    // exit edit mode
-    setEditingId(null);
-    setEditDiscountInput("");
-    setEditReasonInput("");
-    setEditingError("");
-  } catch (err) {
-    console.error("Failed to update discount entry:", err);
-    setEditingError("更新に失敗しました。コンソールを確認してください。");
-  } finally {
-    setEditingLoading(false);
-  }
-};
   const handleReceiptUpload = async (targetMonth) => {
     if (!file || !student) return alert("ファイルを選択してください。");
     const numericAmount = Number(String(amount).replace(/[^0-9.-]/g, ""));
@@ -383,6 +193,128 @@ const updateDiscountEntry = async (entryId) => {
     }
   };
 
+  // Discounts: add, edit, delete (saved under students/{studentId}/discounts/{autoId})
+  useEffect(() => {
+    if (!student?.id) return;
+    const discountsRef = collection(
+      db,
+      "students",
+      String(student.id),
+      "discounts"
+    );
+    const q = query(discountsRef, orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setDiscounts(arr);
+      },
+      (err) => {
+        console.error("discounts onSnapshot error:", err);
+      }
+    );
+    return () => unsub();
+  }, [student?.id]);
+
+  const validateReasonNoDigits = (str) => {
+    if (!str) return false;
+    return !/\d/.test(str);
+  };
+
+  const handleAddDiscount = async () => {
+    if (!student?.id) return alert("学生情報が見つかりません。");
+    if (!session?.user) return alert("権限がありません。");
+
+    const reason = String(newReason || "").trim();
+    const amountNum = Number(newAmount);
+
+    if (!reason) return alert("割引理由を入力してください。");
+    if (!validateReasonNoDigits(reason))
+      return alert("割引理由に数字は含めないでください。");
+
+    if (Number.isNaN(amountNum) || !isFinite(amountNum))
+      return alert("割引額は数値で入力してください。");
+    if (amountNum < 0 || amountNum > 999999)
+      return alert("割引額は 0 〜 999,999 の範囲で入力してください。");
+
+    if ((discounts || []).length >= 5)
+      return alert("割引レコードは最大5件までです。既存の割引を削除してください。");
+
+    try {
+      const ref = collection(db, "students", String(student.id), "discounts");
+      const payload = {
+        reason,
+        amount: amountNum,
+        teacher: session.user.email || session.user.name || null,
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(ref, payload);
+      // clear inputs - onSnapshot will update discounts list
+      setNewReason("");
+      setNewAmount("");
+    } catch (err) {
+      console.error("add discount failed:", err);
+      alert("割引の保存に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  const handleDeleteDiscount = async (id) => {
+    if (!student?.id || !id) return;
+    const ok = confirm("この割引を削除してよろしいですか？");
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, "students", String(student.id), "discounts", id));
+    } catch (err) {
+      console.error("delete discount failed:", err);
+      alert("削除に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  // Replace prompt-based edit with modal:
+  const openEditModal = (discount) => {
+    if (!discount || !discount.id) return;
+    setEditDiscountId(discount.id);
+    setEditReason(discount.reason || "");
+    setEditAmount(String(discount.amount ?? ""));
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditReason("");
+    setEditAmount("");
+    setEditDiscountId(null);
+  };
+
+  const applyEditDiscount = async () => {
+    if (!student?.id || !editDiscountId) return alert("学生情報または割引IDが見つかりません。");
+    const reason = String(editReason || "").trim();
+    const amountNum = Number(editAmount);
+
+    if (!reason) return alert("割引理由を入力してください。");
+    if (!validateReasonNoDigits(reason))
+      return alert("割引理由に数字は含めないでください。");
+    if (Number.isNaN(amountNum) || !isFinite(amountNum))
+      return alert("割引額は数値で入力してください。");
+    if (amountNum < 0 || amountNum > 999999)
+      return alert("割引額は 0 〜 999,999 の範囲で入力してください。");
+
+    try {
+      await updateDoc(
+        doc(db, "students", String(student.id), "discounts", editDiscountId),
+        {
+          reason,
+          amount: amountNum,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      closeEditModal();
+    } catch (err) {
+      console.error("apply edit discount failed:", err);
+      alert("更新に失敗しました。コンソールを確認してください。");
+    }
+  };
+
   const openLightbox = (src) => setLightboxSrc(src);
   const closeLightbox = () => setLightboxSrc(null);
   useEffect(() => {
@@ -453,7 +385,7 @@ const updateDiscountEntry = async (entryId) => {
 
   useEffect(() => {
     const fetchCourse = async () => {
-      if (!student?.courseId) {
+      if (student?.courseId == null) {
         setCourseInfo(null);
         setComputedTuition(null);
         return;
@@ -613,8 +545,8 @@ const updateDiscountEntry = async (entryId) => {
       </div>
     );
   }
-
-  const baseTotal = Number(
+  // original total tuition (source of truth, not displayed directly anymore)
+  const originalTotal = Number(
     courseInfo?.totalFee ??
       courseInfo?.pricePerMonth ??
       computedTuition ??
@@ -622,23 +554,28 @@ const updateDiscountEntry = async (entryId) => {
       student?.totalFees ??
       0
   );
-  const appliedDiscount = (() => {
-    if (Array.isArray(student?.discounts) && student.discounts.length > 0) {
-      return student.discounts.reduce(
-        (s, it) => s + (Number(it?.amount) || Number(it) || 0),
-        0
-      );
-    }
-    return Number(student?.discount ?? discount) || 0;
-  })();
-  const total = Math.max(baseTotal - appliedDiscount, 0);
+
+  // total discount computed from discount subcollection (real-time)
+  const totalDiscount = (discounts || []).reduce(
+    (sum, d) => sum + (Number(d.amount) || 0),
+    0
+  );
+
+  // reduced total tuition after discounts (this is what we display as 総学費)
+  const reducedTotal = Math.max(originalTotal - totalDiscount, 0);
+
   const paidFromPayments = payments.reduce(
     (sum, p) => sum + (Number(p.amount) || 0),
     0
   );
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
-  const remaining = Math.max(total - paid, 0);
-  const progress = total ? Math.min((paid / total) * 100, 100) : 0;
+
+  // remaining = reduced total - paid
+  const remaining = Math.max(reducedTotal - paid, 0);
+
+  // progress uses paid / reducedTotal (if reducedTotal is zero, progress = 0)
+  const progress =
+    reducedTotal > 0 ? Math.min((paid / reducedTotal) * 100, 100) : 0;
 
   let displayStudentYear = null;
   if (student?.studentId) {
@@ -680,7 +617,7 @@ const updateDiscountEntry = async (entryId) => {
   const rawCourseName =
     courseInfo?.name ??
     student?.courseId ??
-    session?.user?.courseName ??
+    session.user.courseName ??
     "未設定";
   const hasJapanese = /[\u3040-\u30ff\u4e00-\u9faf]/.test(
     String(rawCourseName)
@@ -741,6 +678,7 @@ const updateDiscountEntry = async (entryId) => {
           }`}
           onClick={() => setActiveTab("profile")}
         >
+          プロフィール 
           プロフィール
         </button>
       </header>
@@ -751,9 +689,6 @@ const updateDiscountEntry = async (entryId) => {
           <div className={styles.infoBox}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ display: "block", marginBottom: 8 }}>
-                {/* <strong style={{ fontSize: 14, color: "#0f172a" }}>
-                  コース:
-                </strong> */}
                 <span
                   style={{
                     display: "inline-block",
@@ -791,23 +726,15 @@ const updateDiscountEntry = async (entryId) => {
                         border: "1px solid #e6e332",
                       }}
                     >
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ color: "#374151", fontWeight: 600 }}>
-                          割引理由
-                        </div>
+                      {/* New discount inputs (single-line, per requirement) */}
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <input
                           type="text"
-                          value={discountReason}
-                          onChange={(e) => setDiscountReason(e.target.value)}
-                          placeholder="例: 奨学金・成績優秀など"
+                          value={newReason}
+                          onChange={(e) => setNewReason(e.target.value)}
+                          placeholder="割引理由（数字禁止）"
                           style={{
-                            width: 240,
+                            width: 300,
                             padding: "8px 10px",
                             height: 36,
                             borderRadius: 8,
@@ -816,29 +743,15 @@ const updateDiscountEntry = async (entryId) => {
                             color: "#0b1220",
                           }}
                         />
-                      </label>
-                      {discountError && (
-                        <div style={{ color: "#ef4444", marginTop: 8 }}>
-                          {discountError}
-                        </div>
-                      )}
-                      <label
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <div style={{ color: "#374151", fontWeight: 600 }}>
-                          減免
-                        </div>
                         <input
                           type="number"
-                          value={discountInput}
-                          onChange={(e) => setDiscountInput(e.target.value)}
-                          placeholder="例: 5000"
+                          value={newAmount}
+                          onChange={(e) => setNewAmount(e.target.value)}
+                          placeholder="割引額"
+                          min={0}
+                          max={999999}
                           style={{
-                            width: 110,
+                            width: 140,
                             padding: "8px 10px",
                             height: 36,
                             borderRadius: 8,
@@ -847,195 +760,170 @@ const updateDiscountEntry = async (entryId) => {
                             color: "#0b1220",
                           }}
                         />
-                      </label>
+                        <button
+                          className={styles.primaryBtn}
+                          onClick={handleAddDiscount}
+                          type="button"
+                          style={{
+                            padding: "8px 12px",
+                            background: "#2563eb",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 8,
+                            boxShadow: "0 2px 6px rgba(37,99,235,0.12)",
+                          }}
+                        >
+                          保存
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ fontSize: 13, color: "#374151" }}>
-                      割引: {appliedDiscount.toLocaleString()}円
-                      {student?.discountReason ? (
-                        <span
-                          style={{
-                            marginLeft: 12,
-                            color: "#0b1220",
-                            fontSize: 13,
-                          }}
-                        >
-                          割引理由:{" "}
-                          <strong style={{ marginLeft: 6 }}>
-                            {student.discountReason}
-                          </strong>
-                          {student.discountReasonBy ? (
-                            <span style={{ marginLeft: 8, color: "#555" }}>
-                              担当: {student.discountReasonBy}
-                            </span>
-                          ) : null}
-                          {student.discountReasonAt ? (
-                            <span
-                              style={{
-                                marginLeft: 8,
-                                color: "#666",
-                                fontSize: 12,
-                              }}
-                            >
-                              日時: {formatTimestamp(student.discountReasonAt)}
-                            </span>
-                          ) : null}
-                        </span>
-                      ) : null}
+                      {/* 合計割引: {totalDiscount.toLocaleString()}円 */}
                     </div>
                   )}
                 </div>
 
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button
-                    className={styles.primaryBtn}
-                    onClick={saveDiscount}
-                    type="button"
-                    style={{
-                      padding: "8px 12px",
-                      background: "#2563eb",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 8,
-                      boxShadow: "0 2px 6px rgba(37,99,235,0.12)",
-                    }}
-                  >
-                    保存
-                  </button>
-                  <button
-                    className={styles.secondaryBtn}
-                    onClick={deleteDiscount}
-                    type="button"
-                    title="割引情報を削除"
-                    style={{
-                      marginLeft: 8,
-                      background: "#fff",
-                      color: "#ef4444",
-                      border: "1px solid #fee2e2",
-                    }}
-                  >
-                    削除
-                  </button>
-                  <button
-                    className={styles.secondaryBtn}
-                    onClick={handleMigrateYear}
-                    type="button"
-                    disabled={migrating}
-                    title="未払い残を次年度へ移行します"
-                    style={{ marginLeft: 8 }}
-                  >
-                    {migrating ? "移行中..." : "年度移行（未払いを次年へ移す）"}
-                  </button>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Live discount reason message shown above the progress bar */}
-          {(discountReason || student?.discountReason) && (
+          {/* Discount items list (real-time) */}
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
+            <strong>割引履歴</strong>
             <div
               style={{
-                marginBottom: 8,
-                padding: "8px 12px",
-                background: "#eef2ff",
+                marginTop: 8,
+                background: "#fff",
                 borderRadius: 8,
-                color: "#0f172a",
-                fontSize: 13,
-                display: "block",
-                alignItems: "center",
-                borderLeft: "4px solid #22c55e",
+                border: "1px solid #efefef",
+                padding: 12,
               }}
             >
-              <strong style={{ color: "#0f172a" }}>割引理由:</strong>
-              <span
-                style={{ marginLeft: 8, color: "#334155", fontWeight: 500 }}
-              >
-                {discountReason || student?.discountReason}
-              </span>
-              {student?.discountReasonBy || session?.user ? (
-                <span
-                  style={{ marginLeft: 12, color: "#475569", fontSize: 12 }}
+              {(!discounts || discounts.length === 0) && (
+                <div style={{ color: "#666" }}>割引はありません。</div>
+              )}
+              {(discounts || []).map((d) => (
+                <div
+                  key={d.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 6px",
+                    borderBottom: "1px solid #f3f4f6",
+                  }}
                 >
-                  {student?.discountReasonBy
-                    ? `担当: ${student.discountReasonBy}`
-                    : session?.user?.name || session?.user?.email}
-                  {student?.discountReasonAt
-                    ? ` ・ ${formatTimestamp(student.discountReasonAt)}`
-                    : ""}
-                </span>
-              ) : null}
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ minWidth: 220 }}>
+                      <div style={{ fontWeight: 700 }}>{d.reason}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                        {d.teacher || "N/A"}
+                        {d.createdAt ? ` ・ ${formatTimestamp(d.createdAt)}` : ""}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 700 }}>¥{Number(d.amount || 0).toLocaleString()}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className={styles.secondaryBtn}
+                      onClick={() => openEditModal(d)}
+                      title="編集"
+                      type="button"
+                    >
+                      編集
+                    </button>
+                    <button
+                      className={styles.secondaryBtn}
+                      onClick={() => handleDeleteDiscount(d.id)}
+                      title="削除"
+                      type="button"
+                    >
+                      削除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Edit Modal */}
+          {isEditModalOpen && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              style={{
+                position: "fixed",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(0,0,0,0.4)",
+                zIndex: 60,
+              }}
+              onClick={closeEditModal}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: 560,
+                  maxWidth: "95%",
+                  background: "#fff",
+                  borderRadius: 12,
+                  padding: 20,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                }}
+              >
+                <h3 style={{ marginTop: 0 }}>割引を編集</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引理由（数字禁止）</label>
+                  <input
+                    type="text"
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="例: 奨学金・成績優秀など"
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #e6eef8",
+                      width: "100%",
+                    }}
+                  />
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引額</label>
+                  <input
+                    type="number"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    placeholder="例: 5000"
+                    min={0}
+                    max={999999}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #e6eef8",
+                      width: "200px",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                    <button
+                      className={styles.secondaryBtn}
+                      onClick={closeEditModal}
+                      type="button"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      className={styles.primaryBtn}
+                      onClick={applyEditDiscount}
+                      type="button"
+                    >
+                      保存
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
-          {discountEntries.map((e) => (
-  <li
-    key={e.id}
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "8px 12px",
-      borderRadius: 8,
-      background: "#fff",
-      marginBottom: 8,
-      border: "1px solid #eef2f3",
-    }}
-  >
-    <div style={{ flex: 1 }}>
-      {editingId === e.id ? (
-        <>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={editDiscountInput}
-              onChange={(ev) => setEditDiscountInput(ev.target.value)}
-              style={{ width: 90, padding: "6px 8px", borderRadius: 6 }}
-            />
-            <input
-              type="text"
-              value={editReasonInput}
-              onChange={(ev) => setEditReasonInput(ev.target.value)}
-              placeholder="理由（数字不可）"
-              style={{ flex: 1, padding: "6px 8px", borderRadius: 6 }}
-            />
-          </div>
-          {editingError && <div style={{ color: "#ef4444", marginTop: 6 }}>{editingError}</div>}
-          <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-            <button className={styles.primaryBtn} onClick={() => updateDiscountEntry(e.id)} disabled={editingLoading}>
-              {editingLoading ? "保存中..." : "保存"}
-            </button>
-            <button
-              className={styles.secondaryBtn}
-              onClick={() => {
-                setEditingId(null);
-                setEditDiscountInput("");
-                setEditReasonInput("");
-                setEditingError("");
-              }}
-            >
-              キャンセル
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{ fontWeight: 700 }}>{Number(e.discount).toLocaleString()}% ・ {e.reason}</div>
-          <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
-            作成: {formatTimestamp(e.createdAt)}{e.updatedAt ? ` ・ 更新: ${formatTimestamp(e.updatedAt)}` : ""}
-          </div>
-        </>
-      )}
-    </div>
-
-    {editingId !== e.id && (
-      <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
-        <button className={styles.secondaryBtn} onClick={() => updateDiscountEntry(e.id)}>編集</button>
-        <button className={styles.secondaryBtn} onClick={() => deleteDiscountEntry(e.id)} style={{ color: "#ef4444" }}>削除</button>
-      </div>
-    )}
-  </li>
-))}
 
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
@@ -1049,10 +937,10 @@ const updateDiscountEntry = async (entryId) => {
           </div>
 
           <div className={styles.stats}>
-            <article className={styles.stat}>
+                        <article className={styles.stat}>
               <div className={styles["stat-label"]}>総学費</div>
               <div className={styles["stat-value"]}>
-                {total.toLocaleString()}円
+                {reducedTotal.toLocaleString()}円
               </div>
             </article>
             <article className={styles.stat}>
@@ -1061,6 +949,12 @@ const updateDiscountEntry = async (entryId) => {
                 {paid.toLocaleString()}円
               </div>
             </article>
+            {/* <article className={styles.stat}>
+              <div className={styles["stat-label"]}>割引合計</div>
+              <div className={styles["stat-value"]}>
+                {totalDiscount.toLocaleString()}円
+              </div>
+            </article> */}
             <article className={styles.stat}>
               <div className={styles["stat-label"]}>残り</div>
               <div className={`${styles["stat-value"]} ${styles.remain}`}>
@@ -1306,6 +1200,7 @@ const updateDiscountEntry = async (entryId) => {
 
       {activeTab === "profile" && (
         <section className={styles.card}>
+          <h2>プロフィール</h2>
           <h2 style={{ textAlign: "center" }}>プロフィール</h2>
           <div
             style={{
@@ -1320,9 +1215,9 @@ const updateDiscountEntry = async (entryId) => {
             }}
           >
             <p style={{ margin: "6px 0" }}>
-              名前: {student?.name || session?.user?.name}
+              名前: {student?.name || session.user.name}
             </p>
-            <p style={{ margin: "6px 0" }}>メール: {session?.user?.email}</p>
+            <p style={{ margin: "6px 0" }}>メール: {session.user.email}</p>
             <p style={{ margin: "6px 0" }}>
               学籍番号: {student?.studentId || "未登録"}
             </p>
