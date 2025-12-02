@@ -46,6 +46,8 @@ export default function StudentDashboardIdPage() {
   const routeId = params?.id;
   const [discount, setDiscount] = useState(0);
   const [discountInput, setDiscountInput] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
+  const [discountError, setDiscountError] = useState("");
   const [migrating, setMigrating] = useState(false);
 
   // sync discount from student doc when it loads
@@ -54,6 +56,7 @@ export default function StudentDashboardIdPage() {
       const v = Number(student.discount) || 0;
       setDiscount(v);
       setDiscountInput(String(v || ""));
+      setDiscountReason(student.discountReason || "");
     }
   }, [student]);
 
@@ -61,6 +64,7 @@ export default function StudentDashboardIdPage() {
     const v = Number(value) || 0;
     // optimistic update: update local state immediately so UI reflects change
     const prevStudentDiscount = student?.discount;
+    const prevReason = student?.discountReason;
     try {
       setDiscount(v);
       setDiscountInput(String(v || ""));
@@ -70,22 +74,68 @@ export default function StudentDashboardIdPage() {
 
       if (!student?.id) return;
 
+      const actor = session?.user?.email || session?.user?.name || null;
       await updateDoc(doc(db, "students", student.id), {
         discount: v,
+        discountReason: discountReason || null,
+        discountReasonBy: actor,
+        discountReasonAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      // update local student state to reflect saved reason and metadata
+      setStudent((s) => ({
+        ...(s || {}),
+        discount: v,
+        discountReason: discountReason || null,
+        discountReasonBy: actor,
+        discountReasonAt: new Date(),
+      }));
     } catch (err) {
       console.error("Failed to save discount:", err);
       // rollback local optimistic state
       setDiscount(Number(prevStudentDiscount) || 0);
       setDiscountInput(String(prevStudentDiscount || ""));
+      setDiscountReason(prevReason || "");
       if (student && student.id) {
         setStudent((prev) =>
-          prev ? { ...prev, discount: prevStudentDiscount } : prev
+          prev
+            ? {
+                ...prev,
+                discount: prevStudentDiscount,
+                discountReason: prevReason,
+              }
+            : prev
         );
       }
       alert("割引の保存に失敗しました。コンソールを確認してください。");
     }
+  };
+
+  // Wrapper to validate both fields before saving
+  const saveDiscount = async () => {
+    setDiscountError("");
+    const reason = String(discountReason || "").trim();
+    const amountRaw = String(discountInput || "").trim();
+    if (!reason) {
+      setDiscountError("割引理由を入力してください。");
+      return;
+    }
+    if (!amountRaw) {
+      setDiscountError("減免金額を入力してください。");
+      return;
+    }
+    const n = Number(amountRaw);
+    if (!Number.isFinite(n) || n <= 0) {
+      setDiscountError(
+        "有効な減免金額を入力してください（0 より大きい数値）。"
+      );
+      return;
+    }
+
+    // call existing handler which performs optimistic update and saves to Firestore
+    await handleDiscountChange(amountRaw);
+    setDiscountError("");
   };
 
   // Year migration: move unpaid remainder from previous year to next year
@@ -511,7 +561,7 @@ export default function StudentDashboardIdPage() {
   const rawCourseName =
     courseInfo?.name ??
     student?.courseId ??
-    session.user.courseName ??
+    session?.user?.courseName ??
     "未設定";
   const hasJapanese = /[\u3040-\u30ff\u4e00-\u9faf]/.test(
     String(rawCourseName)
@@ -522,6 +572,22 @@ export default function StudentDashboardIdPage() {
   } else {
     if (studentYearEN) courseDisplayName = `${rawCourseName} ${studentYearEN}`;
   }
+
+  // helper to format Firestore timestamps or Date-like values
+  const formatTimestamp = (t) => {
+    if (!t) return "";
+    try {
+      const d =
+        t && typeof t.toDate === "function"
+          ? t.toDate()
+          : t.seconds
+          ? new Date(t.seconds * 1000)
+          : new Date(t);
+      return d.toLocaleString("ja-JP");
+    } catch (e) {
+      return String(t);
+    }
+  };
 
   return (
     <main className={styles.container}>
@@ -565,50 +631,176 @@ export default function StudentDashboardIdPage() {
           <h1 className={styles.title}>支払い状況</h1>
           <div className={styles.infoBox}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div>コース: {courseDisplayName}</div>
-              <div style={{ marginLeft: 8 }}>
-                {session?.user &&
-                (session.user.isAdmin || session.user.role === "teacher") ? (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#666",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <label
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+              <div style={{ display: "block", marginBottom: 8 }}>
+                {/* <strong style={{ fontSize: 14, color: "#0f172a" }}>
+                  コース:
+                </strong> */}
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginLeft: 8,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: "#0b1220",
+                  }}
+                >
+                  {courseDisplayName}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  marginBottom: 12,
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  {session?.user &&
+                  (session.user.isAdmin || session.user.role === "teacher") ? (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "#374151",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                        background: "#ffffff",
+                        padding: "8px",
+                        borderRadius: 10,
+                        border: "1px solid #e6e332",
+                      }}
                     >
-                      減免:
-                      <input
-                        type="number"
-                        value={discountInput}
-                        onChange={(e) => setDiscountInput(e.target.value)}
-                        placeholder="例: 5000"
-                        style={{ width: 110, padding: "4px 8px" }}
-                      />
-                    </label>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button
-                        className={styles.primaryBtn}
-                        onClick={() => handleDiscountChange(discountInput)}
-                        type="button"
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
                       >
-                        保存
-                      </button>
-                      {/* 年度移行ボタンを削除しました */}
+                        <div style={{ color: "#374151", fontWeight: 600 }}>
+                          割引理由
+                        </div>
+                        <input
+                          type="text"
+                          value={discountReason}
+                          onChange={(e) => setDiscountReason(e.target.value)}
+                          placeholder="例: 奨学金・成績優秀など"
+                          style={{
+                            width: 240,
+                            padding: "8px 10px",
+                            height: 36,
+                            borderRadius: 8,
+                            border: "1px solid #e6eef8",
+                            background: "#fff",
+                            color: "#0b1220",
+                          }}
+                        />
+                      </label>
+                      {discountError && (
+                        <div style={{ color: "#ef4444", marginTop: 8 }}>
+                          {discountError}
+                        </div>
+                      )}
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ color: "#374151", fontWeight: 600 }}>
+                          減免
+                        </div>
+                        <input
+                          type="number"
+                          value={discountInput}
+                          onChange={(e) => setDiscountInput(e.target.value)}
+                          placeholder="例: 5000"
+                          style={{
+                            width: 110,
+                            padding: "8px 10px",
+                            height: 36,
+                            borderRadius: 8,
+                            border: "1px solid #e6eef8",
+                            background: "#fff",
+                            color: "#0b1220",
+                          }}
+                        />
+                      </label>
+
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <button
+                            className={styles.primaryBtn}
+                            onClick={saveDiscount}
+                            type="button"
+                          >
+                            保存
+                          </button>
+                          <button
+                            className={styles.primaryBtn}
+                            onClick={() => handleDiscountChange(discountInput)}
+                            type="button"
+                          >
+                            即時保存
+                          </button>
+                        </div>
+                        {/* 年度移行ボタンは削除済み */}
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    割引: {appliedDiscount.toLocaleString()}円
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ fontSize: 12, color: "#666" }}>
+                      割引: {appliedDiscount.toLocaleString()}円
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Live discount reason message shown above the progress bar */}
+          {(discountReason || student?.discountReason) && (
+            <div
+              style={{
+                marginBottom: 8,
+                padding: "8px 12px",
+                background: "#eef2ff",
+                borderRadius: 8,
+                color: "#0f172a",
+                fontSize: 13,
+                display: "block",
+                alignItems: "center",
+                borderLeft: "4px solid #22c55e",
+              }}
+            >
+              <strong style={{ color: "#0f172a" }}>割引理由:</strong>
+              <span
+                style={{ marginLeft: 8, color: "#334155", fontWeight: 500 }}
+              >
+                {discountReason || student?.discountReason}
+              </span>
+              {student?.discountReasonBy || session?.user ? (
+                <span
+                  style={{ marginLeft: 12, color: "#475569", fontSize: 12 }}
+                >
+                  {student?.discountReasonBy
+                    ? `担当: ${student.discountReasonBy}`
+                    : session?.user?.name || session?.user?.email}
+                  {student?.discountReasonAt
+                    ? ` ・ ${formatTimestamp(student.discountReasonAt)}`
+                    : ""}
+                </span>
+              ) : null}
+            </div>
+          )}
 
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
@@ -660,15 +852,6 @@ export default function StudentDashboardIdPage() {
                     <td>¥{p.amount?.toLocaleString()}</td>
                     <td>{p.paymentMethod || "-"}</td>
                     <td>
-                      <span
-                        className={`${styles.status} ${
-                          p.status === "支払い済み"
-                            ? styles.paid
-                            : styles.unpaid
-                        }`}
-                      >
-                        {p.status}
-                      </span>
                       <div style={{ marginTop: 8 }}>
                         <div
                           style={{
@@ -768,83 +951,143 @@ export default function StudentDashboardIdPage() {
       {activeTab === "upload" && (
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
-          <div
+
+          <section
             style={{
-              marginTop: 4,
-              padding: 12,
-              border: "1px solid #eee",
-              borderRadius: 8,
               background: "#fff",
+              padding: 30,
+              borderRadius: 16,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              margin: "20px auto",
+              width: "100%",
+              maxWidth: 600,
+              textAlign: "center",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <label>
-                金額:
+            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+              {/* 月額 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  月額
+                </label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <label>
-                対象月:
+              {/* 対象月 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  対象月
+                </label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <label>
-                ファイル:
+              {/* ファイル */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  ファイル
+                </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <button
-                onClick={() => handleReceiptUpload(receiptMonth || undefined)}
-                disabled={uploading}
+              {/* Centered Button */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: 10,
+                }}
               >
-                {uploading ? "アップロード中..." : "OK"}
-              </button>
+                <button
+                  onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                  disabled={uploading}
+                  style={{
+                    padding: "12px 0",
+                    width: "50%",
+                    maxWidth: 250,
+                    background: "#0070F3",
+                    color: "#fff",
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  {uploading ? "アップロード中..." : "OK"}
+                </button>
+              </div>
+
               {uploading && (
-                <div style={{ marginLeft: 8 }}>進捗: {uploadProgress}%</div>
+                <div
+                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
+                >
+                  進捗: {uploadProgress}%
+                </div>
               )}
             </div>
-          </div>
+          </section>
         </section>
       )}
 
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2>プロフィール</h2>
+          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
           <div
             style={{
               padding: 12,
               border: "1px solid #eee",
               borderRadius: 8,
               background: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
             }}
           >
             <p style={{ margin: "6px 0" }}>
-              名前: {student?.name || session.user.name}
+              名前: {student?.name || session?.user?.name}
             </p>
-            <p style={{ margin: "6px 0" }}>メール: {session.user.email}</p>
+            <p style={{ margin: "6px 0" }}>メール: {session?.user?.email}</p>
             <p style={{ margin: "6px 0" }}>
               学籍番号: {student?.studentId || "未登録"}
             </p>

@@ -102,17 +102,41 @@
   border-radius: 999px;
   color: #ffffff;
   font-size: 13px;
+
+  background: linear-gradient(90deg, #f97316, #fb923c); /* fallback */
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+
   background: linear-gradient(
     90deg,
     #f97316,
     #fb923c
   ); /* default: unpaid (orange) */
+
 }
+
+/* small colored dot before the label */
+.statusText::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+  background: rgba(255,255,255,0.6);
+}
+
 
 /* status variants */
 .paid {
   background: linear-gradient(90deg, #10b981, #059669); /* green */
-  color: #fff;
+  color: #06ee82;
+}
+
+/* emphasize with subtle glow */
+.paid {
+  box-shadow: 0 8px 24px rgba(16,185,129,0.12);
 }
 
 .partial {
@@ -121,6 +145,15 @@
 }
 
 .unpaid {
-  background: linear-gradient(90deg, #f97316, #fb923c); /* orange */
+  /* switch unpaid to a clear red to indicate attention */
+  background: linear-gradient(90deg, #ef4444, #dc2626); /* red */
   color: #fff;
+  box-shadow: 0 8px 24px rgba(220,38,38,0.08);
 }
+
+/* subtle hover scaling for status pills */
+.statusText:hover { transform: translateY(-2px); }
+
+/* row-level helpers (if tr gets these classes) */
+.rowPaid { background: rgba(16,185,129,0.03); }
+.rowUnpaid { background: rgba(239,68,68,0.03); }

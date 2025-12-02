@@ -154,3 +154,63 @@ h1 {
 p {
   margin-bottom: 1rem;
 }
+
+/* ------------------------------------------
+   Responsive enhancements (mobile-first)
+   ------------------------------------------ */
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+body {
+  overflow-x: hidden;
+}
+
+/* Fluid heading scale */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.6rem;
+  }
+}
+
+/* Generic responsive container utility */
+.container-responsive {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
+  max-width: 1100px; /* matches dashboard container */
+}
+@media (max-width: 900px) {
+  .container-responsive {
+    max-width: 100%;
+  }
+}
+
+/* Ensure fixed-size cover images shrink on small screens */
+@media (max-width: 640px) {
+  .img-400x300-cover {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 4/3;
+  }
+}
+
+/* Common flex/grid adjustments for narrow viewports */
+@media (max-width: 900px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 780px) {
+  .receipt-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}
+
+/* Utility: hide overflow horizontally for wide tables on mobile */
+.scroll-x {
+  overflow-x: auto;
+}
