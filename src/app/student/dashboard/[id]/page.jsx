@@ -238,7 +238,9 @@ export default function StudentDashboardIdPage() {
       return alert("割引額は 0 〜 999,999 の範囲で入力してください。");
 
     if ((discounts || []).length >= 5)
-      return alert("割引レコードは最大5件までです。既存の割引を削除してください。");
+      return alert(
+        "割引レコードは最大5件までです。既存の割引を削除してください。"
+      );
 
     try {
       const ref = collection(db, "students", String(student.id), "discounts");
@@ -287,7 +289,8 @@ export default function StudentDashboardIdPage() {
   };
 
   const applyEditDiscount = async () => {
-    if (!student?.id || !editDiscountId) return alert("学生情報または割引IDが見つかりません。");
+    if (!student?.id || !editDiscountId)
+      return alert("学生情報または割引IDが見つかりません。");
     const reason = String(editReason || "").trim();
     const amountNum = Number(editAmount);
 
@@ -678,8 +681,7 @@ export default function StudentDashboardIdPage() {
           }`}
           onClick={() => setActiveTab("profile")}
         >
-          プロフィール 
-          プロフィール
+          プロフィール プロフィール
         </button>
       </header>
 
@@ -727,7 +729,13 @@ export default function StudentDashboardIdPage() {
                       }}
                     >
                       {/* New discount inputs (single-line, per requirement) */}
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 8,
+                          alignItems: "center",
+                        }}
+                      >
                         <input
                           type="text"
                           value={newReason}
@@ -783,7 +791,6 @@ export default function StudentDashboardIdPage() {
                     </div>
                   )}
                 </div>
-
               </div>
             </div>
           </div>
@@ -814,15 +821,21 @@ export default function StudentDashboardIdPage() {
                     borderBottom: "1px solid #f3f4f6",
                   }}
                 >
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <div
+                    style={{ display: "flex", gap: 12, alignItems: "center" }}
+                  >
                     <div style={{ minWidth: 220 }}>
                       <div style={{ fontWeight: 700 }}>{d.reason}</div>
                       <div style={{ fontSize: 12, color: "#6b7280" }}>
                         {d.teacher || "N/A"}
-                        {d.createdAt ? ` ・ ${formatTimestamp(d.createdAt)}` : ""}
+                        {d.createdAt
+                          ? ` ・ ${formatTimestamp(d.createdAt)}`
+                          : ""}
                       </div>
                     </div>
-                    <div style={{ fontWeight: 700 }}>¥{Number(d.amount || 0).toLocaleString()}</div>
+                    <div style={{ fontWeight: 700 }}>
+                      ¥{Number(d.amount || 0).toLocaleString()}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button
@@ -875,8 +888,12 @@ export default function StudentDashboardIdPage() {
                 }}
               >
                 <h3 style={{ marginTop: 0 }}>割引を編集</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引理由（数字禁止）</label>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>
+                    割引理由（数字禁止）
+                  </label>
                   <input
                     type="text"
                     value={editReason}
@@ -889,7 +906,9 @@ export default function StudentDashboardIdPage() {
                       width: "100%",
                     }}
                   />
-                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引額</label>
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>
+                    割引額
+                  </label>
                   <input
                     type="number"
                     value={editAmount}
@@ -904,7 +923,14 @@ export default function StudentDashboardIdPage() {
                       width: "200px",
                     }}
                   />
-                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      justifyContent: "flex-end",
+                      marginTop: 8,
+                    }}
+                  >
                     <button
                       className={styles.secondaryBtn}
                       onClick={closeEditModal}
@@ -937,7 +963,7 @@ export default function StudentDashboardIdPage() {
           </div>
 
           <div className={styles.stats}>
-                        <article className={styles.stat}>
+            <article className={styles.stat}>
               <div className={styles["stat-label"]}>総学費</div>
               <div className={styles["stat-value"]}>
                 {reducedTotal.toLocaleString()}円
@@ -1081,115 +1107,55 @@ export default function StudentDashboardIdPage() {
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
 
-          <section
-            style={{
-              background: "#fff",
-              padding: 30,
-              borderRadius: 16,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              margin: "20px auto",
-              width: "100%",
-              maxWidth: 600,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+          <section className={styles.uploadSection}>
+            <div className={styles.uploadForm}>
               {/* 月額 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  月額
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>月額</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* 対象月 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  対象月
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>対象月</label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* ファイル */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  ファイル
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>ファイル</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadFileInput}
                 />
               </div>
 
               {/* Centered Button */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  marginTop: 10,
-                }}
-              >
+              <div className={styles.uploadBtnWrap}>
                 <button
                   onClick={() => handleReceiptUpload(receiptMonth || undefined)}
                   disabled={uploading}
-                  style={{
-                    padding: "12px 0",
-                    width: "50%",
-                    maxWidth: 250,
-                    background: "#0070F3",
-                    color: "#fff",
-                    fontWeight: 700,
-                    borderRadius: 10,
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "center",
-                  }}
+                  className={styles.uploadBtn}
                 >
                   {uploading ? "アップロード中..." : "OK"}
                 </button>
               </div>
 
               {uploading && (
-                <div
-                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
-                >
+                <div className={styles.uploadProgress}>
                   進捗: {uploadProgress}%
                 </div>
               )}

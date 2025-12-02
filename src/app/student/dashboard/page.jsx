@@ -1048,115 +1048,55 @@ export default function StudentDashboardPage() {
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
 
-          <section
-            style={{
-              background: "#fff",
-              padding: 30,
-              borderRadius: 16,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              margin: "20px auto",
-              width: "100%",
-              maxWidth: 600,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+          <section className={styles.uploadSection}>
+            <div className={styles.uploadForm}>
               {/* 月額 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  月額
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>月額</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* 対象月 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  対象月
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>対象月</label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* ファイル */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  ファイル
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>ファイル</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadFileInput}
                 />
               </div>
 
               {/* Centered Button */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  marginTop: 10,
-                }}
-              >
+              <div className={styles.uploadBtnWrap}>
                 <button
                   onClick={() => handleReceiptUpload(receiptMonth || undefined)}
                   disabled={uploading}
-                  style={{
-                    padding: "12px 0",
-                    width: "50%",
-                    maxWidth: 250,
-                    background: "#0070F3",
-                    color: "#fff",
-                    fontWeight: 700,
-                    borderRadius: 10,
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "center",
-                  }}
+                  className={styles.uploadBtn}
                 >
                   {uploading ? "アップロード中..." : "OK"}
                 </button>
               </div>
 
               {uploading && (
-                <div
-                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
-                >
+                <div className={styles.uploadProgress}>
                   進捗: {uploadProgress}%
                 </div>
               )}

@@ -772,3 +772,144 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================
+   Receipt Upload Section
+   ===================== */
+.uploadSection {
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin: 20px auto;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.uploadField {
+  text-align: left;
+  width: 100%;
+}
+
+.uploadLabel {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+  color: #374151;
+}
+
+.uploadInput {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  width: 100%;
+  background: #fafafa;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.uploadInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.uploadFileInput {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  width: 100%;
+  background: #fafafa;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.uploadBtnWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.uploadBtn {
+  padding: 14px 0;
+  width: 100%;
+  max-width: 250px;
+  background: #0070f3;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  font-size: 16px;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.uploadBtn:hover {
+  background: #005bb5;
+}
+
+.uploadBtn:active {
+  transform: scale(0.98);
+}
+
+.uploadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.uploadProgress {
+  text-align: center;
+  margin-top: 6px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Mobile responsive styles for upload section */
+@media (max-width: 640px) {
+  .uploadSection {
+    padding: 20px 16px;
+    margin: 12px auto;
+    border-radius: 12px;
+  }
+
+  .uploadForm {
+    gap: 20px;
+  }
+
+  .uploadInput,
+  .uploadFileInput {
+    padding: 14px 12px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .uploadBtn {
+    width: 100%;
+    max-width: none;
+    padding: 16px 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .uploadSection {
+    padding: 16px 12px;
+    margin: 8px auto;
+  }
+
+  .uploadForm {
+    gap: 16px;
+  }
+
+  .uploadLabel {
+    font-size: 14px;
+  }
+}
