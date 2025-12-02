@@ -778,7 +778,7 @@ export default function PaymentSchedule({
             <tr>
               <th>支払い月</th>
               <th>期限</th>
-              <th>金額</th>
+              <th>月額</th>
               <th>状態</th>
               <th>レシート</th>
             </tr>
@@ -793,15 +793,53 @@ export default function PaymentSchedule({
                   {canEditAmounts ? (
                     <input
                       type="number"
-                      defaultValue={s.dueAmount}
+                      defaultValue={
+                        // Prefer courseInfo.monthlyTemplate for display if present
+                        (() => {
+                          try {
+                            const mm = String(s.month || "").slice(5, 7);
+                            const tmpl = courseInfo?.monthlyTemplate || {};
+                            if (tmpl && typeof tmpl[mm] !== "undefined")
+                              return Number(tmpl[mm]) || 0;
+                          } catch (e) {
+                            /* ignore */
+                          }
+                          return s.dueAmount;
+                        })()
+                      }
                       onBlur={(e) => onDueChange(s.month, e.target.value)}
                       className={styles.inputAmount}
                     />
                   ) : (
-                    <>¥{Number(s.dueAmount).toLocaleString()}</>
+                    <>
+                      ¥
+                      {(() => {
+                        try {
+                          const mm = String(s.month || "").slice(5, 7);
+                          const tmpl = courseInfo?.monthlyTemplate || {};
+                          if (tmpl && typeof tmpl[mm] !== "undefined")
+                            return Number(tmpl[mm]).toLocaleString();
+                        } catch (e) {
+                          /* ignore */
+                        }
+                        return Number(s.dueAmount).toLocaleString();
+                      })()}
+                    </>
                   )}
                 </td>
-                <td>{s.status}</td>
+                <td>
+                  <span
+                    className={
+                      s.status === "支払い済み"
+                        ? `${styles.statusText} ${styles.paid}`
+                        : s.status === "一部支払い"
+                        ? `${styles.statusText} ${styles.partial}`
+                        : `${styles.statusText} ${styles.unpaid}`
+                    }
+                  >
+                    {s.status}
+                  </span>
+                </td>
                 <td>
                   <ReceiptList payments={s.relatedPayments || []} />
                 </td>

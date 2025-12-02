@@ -9,6 +9,7 @@ import {
   updateDoc,
   addDoc,
   collection,
+  onSnapshot,
   serverTimestamp,
   query,
   where,
@@ -190,24 +191,24 @@ export default function StudentDashboardPage() {
     }
 
     const studentRef = doc(db, "students", String(studentId));
-    (async () => {
-      try {
-        const snap = await getDoc(studentRef);
+    const unsub = onSnapshot(
+      studentRef,
+      async (snap) => {
         if (snap.exists()) {
           setStudent({ ...snap.data(), studentId });
         } else {
           setStudent(null);
         }
-      } catch (err) {
-        console.error("Student getDoc error:", err);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("Student snapshot error:", err);
         setStudent(null);
-      } finally {
         setLoading(false);
       }
-    })();
+    );
 
-    // no realtime subscription here; single-shot read is sufficient for this page
-    return () => {};
+    return () => unsub();
   }, [status, session]);
 
   // 🔹 Googleログイン後、自動で students に登録
@@ -566,7 +567,6 @@ export default function StudentDashboardPage() {
             name: d.name || "未設定",
             pricePerMonth: monthly,
             totalFee: totalFee,
-            monthlyTemplate: d.monthlyTemplate || {},
           });
           setComputedTuition(displayTotal);
         } else {
@@ -593,7 +593,6 @@ export default function StudentDashboardPage() {
                 name: d.name || "未設定",
                 pricePerMonth: monthly,
                 totalFee: totalFee,
-                monthlyTemplate: d.monthlyTemplate || {},
               });
               setComputedTuition(displayTotal);
               found = true;
@@ -635,7 +634,6 @@ export default function StudentDashboardPage() {
                     name: d.name || "未設定",
                     pricePerMonth: monthly,
                     totalFee: totalFee,
-                    monthlyTemplate: d.monthlyTemplate || {},
                   });
                   setComputedTuition(displayTotal);
                   found = true;
@@ -683,17 +681,20 @@ export default function StudentDashboardPage() {
       where("studentId", "==", student.studentId),
       orderBy("createdAt", "desc")
     );
-    // Single-shot fetch to avoid continuous streaming reads. Student-level
-    // payments are typically small, so a single getDocs is sufficient.
-    let mounted = true;
-    (async () => {
-      try {
-        const snap = await getDocs(q);
-        if (!mounted) return;
-        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setPayments(data);
-      } catch (err) {
-        console.error("Payments getDocs error:", err);
+      },
+      (err) => {
+        console.error("Payments snapshot error:", err);
+        // Firestore may require a composite index when combining where() and orderBy() on different fields.
+        // The error.message usually includes a direct URL to create the index in Firebase Console — log it so developers can click it.
         if (err && err.message) {
           console.warn(
             "Firestore index required or query failed:",
@@ -701,11 +702,9 @@ export default function StudentDashboardPage() {
           );
         }
       }
-    })();
+    );
 
-    return () => {
-      mounted = false;
-    };
+    return () => unsub();
   }, [student?.studentId]);
 
   // 🔹 自動リマインダー計算: student.startMonth から現在までの月で未払いの月を見つける
@@ -795,6 +794,7 @@ export default function StudentDashboardPage() {
     (sum, p) => sum + (Number(p.amount) || 0),
     0
   );
+
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
 
   const remaining = Math.max(total - paid, 0);
@@ -850,7 +850,11 @@ export default function StudentDashboardPage() {
     String(rawCourseName)
   );
   let courseDisplayName = rawCourseName;
-  if (hasJapanese) {
+  // If courseInfo explicitly provides a `year` field (e.g. "2nd Year"),
+  // prefer it unchanged. Otherwise fall back to student-derived year labels.
+  if (courseInfo?.year) {
+    courseDisplayName = `${rawCourseName} ${courseInfo.year}`;
+  } else if (hasJapanese) {
     if (studentYearJP) courseDisplayName = `${rawCourseName} ${studentYearJP}`;
   } else {
     if (studentYearEN) courseDisplayName = `${rawCourseName} ${studentYearEN}`;
@@ -858,7 +862,7 @@ export default function StudentDashboardPage() {
 
   return (
     <main className={styles.container}>
-      {/* 🔹 タブメニュー */}
+      {/* 🔹 セグメントナビ（上部・モバイル優先） */}
       <header className={styles.tabs}>
         <button
           className={`${styles.tab} ${
@@ -938,81 +942,28 @@ export default function StudentDashboardPage() {
               </div>
             </article>
           </div>
-          <table className={styles.paymentTable}>
-            <tbody>
-              {/* Reminders block: show when there are missing months */}
-              {reminders && reminders.length > 0 && (
-                <tr>
-                  <td colSpan={5}>
-                    <div
-                      style={{
-                        padding: 10,
-                        background: "#fff8f0",
-                        borderRadius: 8,
-                        marginBottom: 8,
-                      }}
-                    >
-                      <strong>お支払いのリマインダー</strong>
-                      <div style={{ marginTop: 6 }}>
-                        次の月の支払いが未登録です: {reminders.join("、")}
-                      </div>
-                      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-                        <button onClick={sendReminderEmail}>
-                          リマインダーメールを受け取る
-                        </button>
-                        <button
-                          onClick={() =>
-                            navigator.share &&
-                            navigator.share({
-                              title: "支払いのリマインダー",
-                              text: `支払い未登録の月: ${reminders.join("、")}`,
-                            })
-                          }
-                        >
-                          共有
-                        </button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {payments.map((p) => {
-                const date = p.createdAt?.toDate
-                  ? p.createdAt.toDate()
-                  : new Date();
-                //  日付と時間を日本語形式で表示
-                const formattedDate = date.toLocaleDateString("ja-JP");
-                const formattedTime = date.toLocaleTimeString("ja-JP", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                return (
-                  <tr key={p.id}>
-                    <td>{formattedDate}</td>
-                    <td>{formattedTime}</td>
-                    <td>¥{p.amount?.toLocaleString()}</td>
-                    <td>{p.paymentMethod || "-"}</td>
-                    <td>
-                      <span
-                        className={`${styles.status} ${
-                          p.status === "支払い済み"
-                            ? styles.paid
-                            : styles.unpaid
-                        }`}
-                      >
-                        {p.status}
-                      </span>
 
-                      <div style={{ marginTop: 8 }}>
-                        <div
-                          style={{
-                            marginTop: 8,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                            gap: 8,
-                          }}
-                        >
+          <div className={styles.tableWrap}>
+            <table className={styles.paymentTable}>
+              <tbody>
+                {payments.map((p) => {
+                  const date = p.createdAt?.toDate
+                    ? p.createdAt.toDate()
+                    : new Date();
+                  //  日付と時間を日本語形式で表示
+                  const formattedDate = date.toLocaleDateString("ja-JP");
+                  const formattedTime = date.toLocaleTimeString("ja-JP", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  return (
+                    <tr key={p.id}>
+                      <td data-label="日付">{formattedDate}</td>
+                      <td data-label="時間">{formattedTime}</td>
+                      <td data-label="金額">¥{p.amount?.toLocaleString()}</td>
+                      <td data-label="支払方法">{p.paymentMethod || "-"}</td>
+                      <td data-label="レシート">
+                        <div className={styles.paymentAction}>
                           {p.receiptBase64 ? (
                             <img
                               src={p.receiptBase64}
@@ -1042,13 +993,13 @@ export default function StudentDashboardPage() {
                             削除
                           </button>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           {/* lightbox modal for clicked image */}
           {lightboxSrc && (
             <div
@@ -1096,72 +1047,128 @@ export default function StudentDashboardPage() {
       {activeTab === "upload" && (
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
-          <div
+
+          <section
             style={{
-              marginTop: 4,
-              padding: 12,
-              border: "1px solid #eee",
-              borderRadius: 8,
               background: "#fff",
+              padding: 30,
+              borderRadius: 16,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              margin: "20px auto",
+              width: "100%",
+              maxWidth: 600,
+              textAlign: "center",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <label>
-                金額:
+            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+              {/* 月額 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  月額
+                </label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <label>
-                対象月:
+              {/* 対象月 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  対象月
+                </label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <label>
-                ファイル:
+              {/* ファイル */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  ファイル
+                </label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{ marginLeft: 8 }}
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
                 />
-              </label>
+              </div>
 
-              <button
-                onClick={() => handleReceiptUpload(receiptMonth || undefined)}
-                disabled={uploading}
+              {/* Centered Button */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: 10,
+                }}
               >
-                {uploading ? "アップロード中..." : "OK"}
-              </button>
+                <button
+                  onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                  disabled={uploading}
+                  style={{
+                    padding: "12px 0",
+                    width: "50%",
+                    maxWidth: 250,
+                    background: "#0070F3",
+                    color: "#fff",
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  {uploading ? "アップロード中..." : "OK"}
+                </button>
+              </div>
+
               {uploading && (
-                <div style={{ marginLeft: 8 }}>進捗: {uploadProgress}%</div>
+                <div
+                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
+                >
+                  進捗: {uploadProgress}%
+                </div>
               )}
             </div>
-          </div>
+          </section>
         </section>
       )}
 
       {/* 🔹 プロフィールタブ */}
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2>プロフィール</h2>
+          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
 
           <div
             style={{
@@ -1169,6 +1176,10 @@ export default function StudentDashboardPage() {
               border: "1px solid #eee",
               borderRadius: 8,
               background: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
             }}
           >
             <p style={{ margin: "6px 0" }}>
@@ -1181,6 +1192,7 @@ export default function StudentDashboardPage() {
           </div>
         </section>
       )}
+      {/* bottom nav removed per design preference */}
     </main>
   );
 }

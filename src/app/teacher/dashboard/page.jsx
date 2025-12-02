@@ -7,7 +7,8 @@ import Link from "next/link";
 import StatCard from "@/components/StatCard";
 import RecentActivity from "@/components/RecentActivity";
 import { db } from "@/firebase/clientApp";
-import { collection, getDocs, query, where } from "firebase/firestore";
+
+import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
@@ -17,6 +18,8 @@ export default function TeacherDashboard() {
   const [courseCount, setCourseCount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const [totalFees, setTotalFees] = useState(0);
+  const [recentPayments, setRecentPayments] = useState([]);
+  const [recentLimit, setRecentLimit] = useState(3);
 
   // fetch courses count once (avoid realtime subscription)
   useEffect(() => {
@@ -71,6 +74,24 @@ export default function TeacherDashboard() {
     })();
   }, []);
 
+  // subscribe to latest `recentLimit` payments for RecentActivity
+  useEffect(() => {
+    const col = collection(db, "payments");
+    const q = query(col, orderBy("createdAt", "desc"), limit(recentLimit));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setRecentPayments(items);
+      },
+      (err) => {
+        console.error("Recent payments snapshot error:", err);
+        setRecentPayments([]);
+      }
+    );
+    return () => unsub();
+  }, [recentLimit]);
+
   const stats = [
     {
       title: "コース数",
@@ -121,34 +142,7 @@ export default function TeacherDashboard() {
         </svg>
       ),
     },
-    // {
-    //   title: "未払金",
-    //   value: `¥${Math.max(0, totalFees - totalPaid).toLocaleString()}`,
-    //   color: "#F0B84C",
-    //   link: "/teacher/dashboard/unpaid",
-    //   icon: (
-    //     <svg
-    //       width="32"
-    //       height="32"
-    //       viewBox="0 0 24 24"
-    //       fill="none"
-    //       xmlns="http://www.w3.org/2000/svg"
-    //       aria-hidden
-    //     >
-    //       <circle cx="12" cy="12" r="9" fill="#F0B84C" />
-    //       <path
-    //         d="M12 8v5"
-    //         stroke="#fff"
-    //         strokeWidth="1.4"
-    //         strokeLinecap="round"
-    //       />
-    //       <circle cx="12" cy="16.5" r="0.7" fill="#fff" />
-    //     </svg>
-    //   ),
-    // },
   ];
-
-  // RecentActivity will auto-subscribe to recent payments when no `items` prop is passed.
 
   return (
     <div className="dashboard">
@@ -181,7 +175,50 @@ export default function TeacherDashboard() {
         </div>
 
         <div className="card">
-          <RecentActivity />
+          {/* transform recentPayments into the display shape RecentActivity expects */}
+          <RecentActivity
+            items={recentPayments.map((p) => {
+              const t =
+                p.createdAt && p.createdAt.toDate
+                  ? p.createdAt.toDate()
+                  : p.createdAt && p.createdAt.seconds
+                  ? new Date(p.createdAt.seconds * 1000)
+                  : new Date();
+              const time = t.toLocaleString("ja-JP");
+              let title = `${
+                p.studentId || "unknown"
+              } の支払いが登録されました`;
+              if (p.receiptBase64 || p.receiptUrl)
+                title = `${
+                  p.studentId || "unknown"
+                } がレシートをアップロードしました`;
+              const detail = `金額: ¥${Number(
+                p.amount || 0
+              ).toLocaleString()}  コース: ${p.course || "-"}`;
+              return { title, time, detail };
+            })}
+          />
+          <div
+            style={{
+              marginTop: 8,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ marginLeft: "auto" }}>
+              <button
+                onClick={() => setRecentLimit((prev) => (prev === 3 ? 20 : 3))}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  border: "1px solid #ddd",
+                  background: "#fff",
+                }}
+              >
+                {recentLimit === 3 ? "もっと見る" : "閉じる"}
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
     </div>

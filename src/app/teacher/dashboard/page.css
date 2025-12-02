@@ -24,42 +24,6 @@
   font-size: 0.9rem;
 }
 
-/* Stats cards */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 16px;
-  margin-bottom: 30px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  padding: 16px;
-  transition: 0.2s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-3px);
-}
-
-.stat-title {
-  font-size: 0.9rem;
-  color: #555;
-}
-
-.stat-value {
-  font-size: 1.6rem;
-  font-weight: bold;
-  margin: 6px 0;
-}
-
-.stat-sub {
-  font-size: 0.8rem;
-  color: #6aaa64;
-}
-
 /* Charts grid */
 .charts-grid {
   display: grid;
@@ -80,24 +44,22 @@
   font-weight: 600;
   color: #444;
 }
+
 .stat-card {
   display: block;
   padding: 16px;
   border-radius: 12px;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .link-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
   cursor: pointer;
 }
 
-/* ===========================
-   STAT CARD BASE STYLES
-=========================== */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -121,6 +83,31 @@
 .stat-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+}
+
+/* ------------------------------
+   Responsive (small screens)
+   ------------------------------ */
+@media (max-width: 900px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard {
+    padding: 16px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+  .stat-card {
+    padding: 18px;
+    font-size: 1rem;
+  }
 }
 
 /* ===========================
@@ -157,6 +144,20 @@
 .link-card:hover::after {
   width: 50%;
 }
+
+/* If you don't want the underline/indicator on hover, disable the pseudo-element */
+.link-card::after,
+.link-card:hover::after {
+  display: none !important;
+  width: 0 !important;
+}
+
+/* Ensure links never show default underline on hover */
+.link-card,
+.link-card:hover {
+  text-decoration: none !important;
+}
+
 /* Stat Card Layout */
 .stat-card-inner {
   display: flex;
@@ -165,7 +166,7 @@
   padding: 18px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   transition: 0.2s ease;
 }
 
@@ -191,5 +192,5 @@
 /* Hover */
 .link-card:hover .stat-card-inner {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }

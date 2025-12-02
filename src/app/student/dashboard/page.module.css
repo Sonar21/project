@@ -1,36 +1,48 @@
 /* ページコンテナ */
 .container {
   width: 100%;
-  padding: 24px;
+  padding: 20px;
   box-sizing: border-box;
 }
 
 .tabs {
+  position: sticky;
+  top: 56px; /* sits below header */
+  z-index: 50;
   width: 100%;
   max-width: 980px;
-  display: flex;
-  gap: 12px;
-  margin: 24px 0 18px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0 14px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  padding: 8px 10px;
+  border-bottom: 1px solid #e6e6e9;
 }
 
 .tab {
-  background: transparent;
-  border: none;
-  padding: 10px 12px;
-  border-radius: 10px 10px 0 0;
-  color: var(--muted);
+  appearance: none;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  border-radius: 9999px;
+  color: #111827;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  font-size: 14px;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .tab:hover {
-  color: var(--accent);
+  background: #e5edf9;
+  color: #111827;
 }
 
 .tab.active {
-  color: var(--accent);
-  border-bottom: 3px solid var(--accent);
+  background: #e0ecff;
+  border-color: #2563eb;
+  color: #2563eb;
 }
 
 /* active 用の単独クラスをエクスポートしておく（モジュールで扱いやすくするため） */
@@ -199,10 +211,10 @@
   width: 100%;
   max-width: 980px;
   background: var(--card);
-  border-radius: 18px;
-  padding: 24px;
-  box-shadow: 0 8px 30px rgba(30, 41, 59, 0.06);
-  backdrop-filter: blur(6px);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(4px);
   border: 1px solid rgba(15, 23, 42, 0.03);
 }
 
@@ -334,7 +346,7 @@
   gap: 8px;
 }
 .card {
-  padding: 18px;
+  padding: 16px;
 }
 
 .secondaryBtn {
@@ -345,6 +357,17 @@
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  transition: background-color 0.18s ease, color 0.18s ease,
+    box-shadow 0.16s ease, transform 0.12s ease;
+}
+
+.secondaryBtn:hover,
+.secondaryBtn:active {
+  background: #eb2553;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+  transform: translateY(1px);
 }
 
 /* right */
@@ -450,12 +473,12 @@
 .paymentTable {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 14px;
 }
 .paymentTable thead th {
   text-align: left;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: #fafafa;
   border-bottom: 1px solid #eef2f6;
   color: #374151;
@@ -505,9 +528,9 @@
 .paymentTable {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 12px;
-  margin-top: 16px;
-  font-size: 15px;
+  border-spacing: 0 10px;
+  margin-top: 14px;
+  font-size: 14px;
   table-layout: fixed;
 }
 
@@ -522,7 +545,7 @@
 .paymentTable tbody tr {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(11, 23, 47, 0.05);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -532,7 +555,7 @@
 }
 
 .paymentTable tbody td {
-  padding: 14px 18px;
+  padding: 10px 14px;
   vertical-align: middle;
   background: #fff;
 }
@@ -567,7 +590,7 @@
 
 .paymentTable tbody td:nth-child(5) {
   text-align: right;
-  width: 260px;
+  width: 240px;
 }
 
 /* ステータス */
@@ -621,6 +644,10 @@
 }
 
 @media (max-width: 560px) {
+  .container {
+    padding: 14px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
   .amountRow {
     flex-direction: column;
   }
@@ -631,5 +658,117 @@
   .progressText {
     text-align: left;
     margin-top: 6px;
+  }
+  .card {
+    border-radius: 14px;
+  }
+
+  /* Tighter payment card spacing on small screens */
+  .paymentTable {
+    border-spacing: 0 8px;
+  }
+}
+
+/* New: tabs wrap on narrow screens and reduce padding */
+@media (max-width: 640px) {
+  .tabs {
+    top: 48px;
+    gap: 6px;
+    margin: 8px 0 10px;
+    padding: 6px 8px;
+  }
+  .tab {
+    padding: 8px 8px;
+    font-size: 14px;
+  }
+}
+
+/* New: prevent table overflow on mobile */
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.paymentAction {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Compact table for mobile: turn rows into stacked cards (mobile-only) */
+@media (max-width: 560px) {
+  .paymentTable {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    font-size: 14px;
+  }
+  .paymentTable thead {
+    display: none;
+  }
+  .paymentTable tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    padding: 10px 10px 12px;
+  }
+  .paymentTable tbody td {
+    padding: 4px 4px;
+  }
+  /* Date and time side by side; others full width */
+  .paymentTable tbody td:nth-child(1),
+  .paymentTable tbody td:nth-child(2) {
+    color: #6b7280;
+    width: auto;
+    white-space: nowrap;
+  }
+  .paymentTable tbody td:nth-child(3),
+  .paymentTable tbody td:nth-child(4),
+  .paymentTable tbody td:nth-child(5) {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .paymentTable tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 2px;
+  }
+  .paymentTable tbody td:nth-child(3) {
+    font-weight: 700;
+  }
+  .paymentTable button {
+    padding: 10px 14px;
+    border-radius: 10px;
+    min-height: 40px;
+  }
+
+  /* Mobile-only layout for receipt + delete */
+  .paymentAction {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Ensure floating widgets don't overlap content on small screens */
+.safe-bottom {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+/* bottom nav removed per design preference */
+
+/* New: ensure stat grid stacks to 2 then 1 columns */
+@media (max-width: 780px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .stats {
+    grid-template-columns: 1fr;
   }
 }

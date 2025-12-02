@@ -226,8 +226,8 @@ export default function CoursesPage() {
         <tbody>
           {filteredCourses.map((c, index) => (
             <tr key={c.id}>
-              <td data-label="No">{index + 1}</td>
-              <td data-label="コース名">
+              <td>{index + 1}</td>
+              <td>
                 {/* {c.nameJa && c.nameEn
     ? ${c.nameJa} / ${c.nameEn}
     : c.name || c.nameJa || c.nameEn || c.courseKey || c.id} */}
@@ -240,34 +240,30 @@ export default function CoursesPage() {
                     : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
                 </Link>
               </td>
-              <td data-label="学費">{c.fee}</td>
-              <td data-label="月額">
+              <td>{c.fee}</td>
+              <td>
                 {c.pricePerMonth
                   ? `¥${Number(c.pricePerMonth).toLocaleString()}`
                   : c.permonth
                   ? c.permonth
                   : "-"}
               </td>
-              <td data-label="学生数">{c.students ?? 0}</td>
-              <td data-label="学年">{c.year}</td>
-              <td data-label="操作">
-                <div className="actionsWrap">
-                  {/* <span className="actionsLabel">操作</span> */}
-                  <div className="actionsButtons">
-                    <Link
-                      href={`/teacher/dashboard/course/${c.id}/edit`}
-                      className="view-btn"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      className="delete-btn"
-                      onClick={() => handleDeleteCourse(c.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
+              <td>{c.students ?? 0}</td>
+              <td>{c.year}</td>
+              <td>
+                <Link
+                  // href={`/teacher/dashboard/course/${c.courseKey ?? c.id}/edit`}
+                  href={`/teacher/dashboard/course/${c.id}/edit`}
+                  className="view-btn"
+                >
+                  編集
+                </Link>
+                <button
+                  className="delete-btn"
+                  onClick={() => handleDeleteCourse(c.id)}
+                >
+                  削除
+                </button>
               </td>
             </tr>
           ))}
