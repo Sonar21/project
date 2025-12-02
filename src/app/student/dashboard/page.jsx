@@ -43,6 +43,7 @@ export default function StudentDashboardPage() {
   const [receiptMonth, setReceiptMonth] = useState("");
   const [payments, setPayments] = useState([]); // 🔹 支払い履歴を保存する配列
   const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [prevYearRemaining, setPrevYearRemaining] = useState(null);
 
   // 📸 レシートアップロード関数（支払い情報を記録）
   const handleReceiptUpload = async (targetMonth) => {
@@ -210,6 +211,79 @@ export default function StudentDashboardPage() {
 
     return () => unsub();
   }, [status, session]);
+
+  // Compute previous academic year's remaining amount (academic year starts in April)
+  useEffect(() => {
+    if (!student?.studentId) return;
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const today = new Date();
+        const academicYear =
+          today.getMonth() + 1 >= 4
+            ? today.getFullYear()
+            : today.getFullYear() - 1;
+
+        // Determine entranceYear from stored student or parse from studentId
+        const parsedYearCode = parseInt(
+          String(student.studentId || "").slice(1, 3),
+          10
+        );
+        let parsedEntranceYear =
+          2000 + (Number.isFinite(parsedYearCode) ? parsedYearCode : 0);
+        if (parsedEntranceYear > academicYear) parsedEntranceYear -= 100;
+        const entranceYear = student.entranceYear || parsedEntranceYear;
+
+        const gradeNum = academicYear - entranceYear + 1;
+
+        // previous academic year to consider (the year that just finished if student promoted)
+        const prevAcademicYear = academicYear - 1;
+
+        // only compute for students who may have a previous-year remainder (grade >=2)
+        if (gradeNum < 2) {
+          if (mounted) setPrevYearRemaining(0);
+          return;
+        }
+
+        // read paymentSchedules subcollection and sum months for prevAcademicYear
+        const schedRef = collection(
+          db,
+          "students",
+          String(student.studentId),
+          "paymentSchedules"
+        );
+        const snap = await getDocs(schedRef);
+        if (!mounted) return;
+        const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const prevDocs = docs.filter(
+          (d) =>
+            typeof d.month === "string" &&
+            d.month.startsWith(`${prevAcademicYear}-`)
+        );
+
+        const totalDue = prevDocs.reduce(
+          (s, d) => s + (Number(d.dueAmount) || 0),
+          0
+        );
+        const totalPaid = prevDocs.reduce(
+          (s, d) => s + (Number(d.paidAmount) || 0),
+          0
+        );
+        const remainingPrev = Math.max(totalDue - totalPaid, 0);
+
+        if (mounted) setPrevYearRemaining(remainingPrev);
+      } catch (err) {
+        console.error("Failed to compute previous year remaining:", err);
+        if (mounted) setPrevYearRemaining(null);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [student?.studentId, student?.entranceYear]);
 
   // 🔹 Googleログイン後、自動で students に登録
   useEffect(() => {
@@ -797,7 +871,12 @@ export default function StudentDashboardPage() {
 
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
 
-  const remaining = Math.max(total - paid, 0);
+  const remainingBase = Math.max(total - paid, 0);
+  // 合算表示: 前年度残を含める（prevYearRemaining は null/数値）
+  const remaining = Math.max(
+    (remainingBase || 0) + (prevYearRemaining || 0),
+    0
+  );
   const progress = total ? Math.min((paid / total) * 100, 100) : 0;
 
   // Compute student academic year for display (same logic as used for tuition calculation)
@@ -941,6 +1020,20 @@ export default function StudentDashboardPage() {
                 {remaining.toLocaleString()}円
               </div>
             </article>
+            {typeof prevYearRemaining === "number" && prevYearRemaining > 0 && (
+              <article className={styles.stat}>
+                <div className={styles["stat-label"]}>
+                  前年度（
+                  {(new Date().getMonth() + 1 >= 4
+                    ? new Date().getFullYear()
+                    : new Date().getFullYear() - 1) - 1}
+                  年度）の残り
+                </div>
+                <div className={styles["stat-value"]}>
+                  {prevYearRemaining.toLocaleString()}円
+                </div>
+              </article>
+            )}
           </div>
 
           <table className={styles.paymentTable}>

@@ -637,7 +637,7 @@ export default function CourseDetailPage() {
 
               return (
                 <tr key={s.id}>
-                  <td>
+                  <td data-label="学生記番号">
                     <Link
                       href={`/student/dashboard/${s.id}`}
                       className="text-blue-600 hover:underline"
@@ -645,10 +645,37 @@ export default function CourseDetailPage() {
                       {s.studentId}
                     </Link>
                   </td>
-                  <td>{s.displayName || s.name || "-"}</td>
-                  <td>{s.email || "-"}</td>
-                  <td>{s.startMonth || s.start_date || "-"}</td>
-                  <td>
+                  <td data-label="名前">
+                    <div className="student-row">
+                      {/* <div className="avatar">
+                        {(
+                          (s.displayName || s.name || s.studentId || "")[0] ||
+                          "?"
+                        ).toUpperCase()}
+                      </div> */}
+                      <div className="name-meta">
+                        <div className="student-name">
+                          {s.displayName || s.name || "-"}
+                        </div>
+                        <div className="student-email">{s.email || "-"}</div>
+                        <div className="student-sub">
+                          {s.studentId ? (
+                            <Link
+                              href={`/student/dashboard/${s.id}`}
+                              className="text-blue-600 hover:underline"
+                            >
+                              {s.studentId}
+                            </Link>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td data-label="メール">{s.email || "-"}</td>
+                  <td data-label="開始月">
+                    {s.startMonth || s.start_date || "-"}
+                  </td>
+                  <td data-label="状態">
                     <div
                       style={{
                         display: "flex",
@@ -668,21 +695,12 @@ export default function CourseDetailPage() {
                         {label}
                       </div>
                       <div
-                        style={{
-                          width: "160px",
-                          background: "#e5e7eb",
-                          height: "8px",
-                          borderRadius: "9999px",
-                          overflow: "hidden",
-                        }}
+                        className="progress-bar-container"
+                        style={{ width: "160px" }}
                       >
                         <div
-                          style={{
-                            width: `${paymentRate}%`,
-                            background: "#3b82f6",
-                            height: "100%",
-                            transition: "width 400ms ease",
-                          }}
+                          className="progress-bar"
+                          style={{ width: `${paymentRate}%` }}
                         />
                       </div>
                       {DEBUG && (
@@ -715,7 +733,7 @@ export default function CourseDetailPage() {
                       )}
                     </div>
                   </td>
-                  <td>
+                  <td data-label="操作" className="actions">
                     {/* <Link
                       href={`/teacher/dashboard/course/${id}/student/${s.id}`}
                       className="mr-2"
