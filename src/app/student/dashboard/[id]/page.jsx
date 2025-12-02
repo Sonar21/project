@@ -17,10 +17,12 @@ import {
   getDocs,
   getDoc,
   deleteDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import styles from "./page.module.css";
 import receiptStyles from "@/components/ReceiptList.module.css";
 import PaymentSchedule from "@/components/PaymentSchedule";
+import migrateRemainingToNextYear from "@/lib/migrateYearTuition";
 import { useParams } from "next/navigation";
 
 // This file is a cleaned-up, single-shot-read variant of the student dashboard
@@ -43,30 +45,67 @@ export default function StudentDashboardIdPage() {
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const params = useParams();
   const routeId = params?.id;
-  const [discount, setDiscount] = useState(0);
-  const [discountInput, setDiscountInput] = useState("");
+  const [migrating, setMigrating] = useState(false);
 
-  // sync discount from student doc when it loads
-  useEffect(() => {
-    if (student && typeof student.discount !== "undefined") {
-      const v = Number(student.discount) || 0;
-      setDiscount(v);
-      setDiscountInput(String(v || ""));
+  // New discount system states
+  const [discounts, setDiscounts] = useState([]); // realtime list of discount docs
+  const [newReason, setNewReason] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+  const [editingId, setEditingId] = useState(null);
+
+  // Modal edit states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editReason, setEditReason] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDiscountId, setEditDiscountId] = useState(null);
+
+  // Year migration: move unpaid remainder from previous year to next year
+  const handleMigrateYear = async () => {
+    if (!student?.id) return alert("学生情報が見つかりません。");
+    if (
+      !session?.user ||
+      !(session.user.isAdmin || session.user.role === "teacher")
+    ) {
+      return alert("権限がありません。");
     }
-  }, [student]);
 
-  const handleDiscountChange = async (value) => {
-    const v = Number(value) || 0;
-    setDiscount(v);
-    if (!student?.id) return;
+    const confirmed = confirm(
+      "未払い残高を次年度に移行します。実行してよろしいですか？"
+    );
+    if (!confirmed) return;
+
+    // Ask admin for fromYear (default: previous calendar year)
+    const defaultFrom = new Date().getFullYear() - 1;
+    const raw = prompt(
+      `移行元の年を入力してください（例: ${defaultFrom}）。そのままOKすると ${defaultFrom} が使われます。`,
+      String(defaultFrom)
+    );
+    const fromYear = raw ? Number(raw) : defaultFrom;
+    if (!fromYear || Number.isNaN(fromYear))
+      return alert("有効な年を入力してください。");
+
     try {
-      await updateDoc(doc(db, "students", student.id), {
-        discount: v,
-        updatedAt: serverTimestamp(),
+      setMigrating(true);
+      const res = await migrateRemainingToNextYear({
+        studentId: student.id,
+        fromYear,
+        toYear: fromYear + 1,
       });
+
+      if (res && res.migrated) {
+        alert(
+          `移行が完了しました。${res.addedAmount} 円を ${res.toYear} 年へ追加しました。`
+        );
+        // reload to reflect updated schedules
+        window.location.reload();
+      } else {
+        alert(`移行は行われませんでした: ${res?.reason || "未払い残高なし"}`);
+      }
     } catch (err) {
-      console.error("Failed to save discount:", err);
-      alert("割引の保存に失敗しました。コンソールを確認してください。");
+      console.error("migrateYear failed:", err);
+      alert("移行に失敗しました。コンソールを確認してください。");
+    } finally {
+      setMigrating(false);
     }
   };
 
@@ -154,6 +193,128 @@ export default function StudentDashboardIdPage() {
     }
   };
 
+  // Discounts: add, edit, delete (saved under students/{studentId}/discounts/{autoId})
+  useEffect(() => {
+    if (!student?.id) return;
+    const discountsRef = collection(
+      db,
+      "students",
+      String(student.id),
+      "discounts"
+    );
+    const q = query(discountsRef, orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setDiscounts(arr);
+      },
+      (err) => {
+        console.error("discounts onSnapshot error:", err);
+      }
+    );
+    return () => unsub();
+  }, [student?.id]);
+
+  const validateReasonNoDigits = (str) => {
+    if (!str) return false;
+    return !/\d/.test(str);
+  };
+
+  const handleAddDiscount = async () => {
+    if (!student?.id) return alert("学生情報が見つかりません。");
+    if (!session?.user) return alert("権限がありません。");
+
+    const reason = String(newReason || "").trim();
+    const amountNum = Number(newAmount);
+
+    if (!reason) return alert("割引理由を入力してください。");
+    if (!validateReasonNoDigits(reason))
+      return alert("割引理由に数字は含めないでください。");
+
+    if (Number.isNaN(amountNum) || !isFinite(amountNum))
+      return alert("割引額は数値で入力してください。");
+    if (amountNum < 0 || amountNum > 999999)
+      return alert("割引額は 0 〜 999,999 の範囲で入力してください。");
+
+    if ((discounts || []).length >= 5)
+      return alert("割引レコードは最大5件までです。既存の割引を削除してください。");
+
+    try {
+      const ref = collection(db, "students", String(student.id), "discounts");
+      const payload = {
+        reason,
+        amount: amountNum,
+        teacher: session.user.email || session.user.name || null,
+        createdAt: serverTimestamp(),
+      };
+      await addDoc(ref, payload);
+      // clear inputs - onSnapshot will update discounts list
+      setNewReason("");
+      setNewAmount("");
+    } catch (err) {
+      console.error("add discount failed:", err);
+      alert("割引の保存に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  const handleDeleteDiscount = async (id) => {
+    if (!student?.id || !id) return;
+    const ok = confirm("この割引を削除してよろしいですか？");
+    if (!ok) return;
+    try {
+      await deleteDoc(doc(db, "students", String(student.id), "discounts", id));
+    } catch (err) {
+      console.error("delete discount failed:", err);
+      alert("削除に失敗しました。コンソールを確認してください。");
+    }
+  };
+
+  // Replace prompt-based edit with modal:
+  const openEditModal = (discount) => {
+    if (!discount || !discount.id) return;
+    setEditDiscountId(discount.id);
+    setEditReason(discount.reason || "");
+    setEditAmount(String(discount.amount ?? ""));
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditReason("");
+    setEditAmount("");
+    setEditDiscountId(null);
+  };
+
+  const applyEditDiscount = async () => {
+    if (!student?.id || !editDiscountId) return alert("学生情報または割引IDが見つかりません。");
+    const reason = String(editReason || "").trim();
+    const amountNum = Number(editAmount);
+
+    if (!reason) return alert("割引理由を入力してください。");
+    if (!validateReasonNoDigits(reason))
+      return alert("割引理由に数字は含めないでください。");
+    if (Number.isNaN(amountNum) || !isFinite(amountNum))
+      return alert("割引額は数値で入力してください。");
+    if (amountNum < 0 || amountNum > 999999)
+      return alert("割引額は 0 〜 999,999 の範囲で入力してください。");
+
+    try {
+      await updateDoc(
+        doc(db, "students", String(student.id), "discounts", editDiscountId),
+        {
+          reason,
+          amount: amountNum,
+          updatedAt: serverTimestamp(),
+        }
+      );
+      closeEditModal();
+    } catch (err) {
+      console.error("apply edit discount failed:", err);
+      alert("更新に失敗しました。コンソールを確認してください。");
+    }
+  };
+
   const openLightbox = (src) => setLightboxSrc(src);
   const closeLightbox = () => setLightboxSrc(null);
   useEffect(() => {
@@ -224,7 +385,7 @@ export default function StudentDashboardIdPage() {
 
   useEffect(() => {
     const fetchCourse = async () => {
-      if (!student?.courseId) {
+      if (student?.courseId == null) {
         setCourseInfo(null);
         setComputedTuition(null);
         return;
@@ -384,8 +545,8 @@ export default function StudentDashboardIdPage() {
       </div>
     );
   }
-
-  const baseTotal = Number(
+  // original total tuition (source of truth, not displayed directly anymore)
+  const originalTotal = Number(
     courseInfo?.totalFee ??
       courseInfo?.pricePerMonth ??
       computedTuition ??
@@ -393,15 +554,28 @@ export default function StudentDashboardIdPage() {
       student?.totalFees ??
       0
   );
-  const appliedDiscount = Number(student?.discount ?? discount) || 0;
-  const total = Math.max(baseTotal - appliedDiscount, 0);
+
+  // total discount computed from discount subcollection (real-time)
+  const totalDiscount = (discounts || []).reduce(
+    (sum, d) => sum + (Number(d.amount) || 0),
+    0
+  );
+
+  // reduced total tuition after discounts (this is what we display as 総学費)
+  const reducedTotal = Math.max(originalTotal - totalDiscount, 0);
+
   const paidFromPayments = payments.reduce(
     (sum, p) => sum + (Number(p.amount) || 0),
     0
   );
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
-  const remaining = Math.max(total - paid, 0);
-  const progress = total ? Math.min((paid / total) * 100, 100) : 0;
+
+  // remaining = reduced total - paid
+  const remaining = Math.max(reducedTotal - paid, 0);
+
+  // progress uses paid / reducedTotal (if reducedTotal is zero, progress = 0)
+  const progress =
+    reducedTotal > 0 ? Math.min((paid / reducedTotal) * 100, 100) : 0;
 
   let displayStudentYear = null;
   if (student?.studentId) {
@@ -455,6 +629,22 @@ export default function StudentDashboardIdPage() {
     if (studentYearEN) courseDisplayName = `${rawCourseName} ${studentYearEN}`;
   }
 
+  // helper to format Firestore timestamps or Date-like values
+  const formatTimestamp = (t) => {
+    if (!t) return "";
+    try {
+      const d =
+        t && typeof t.toDate === "function"
+          ? t.toDate()
+          : t.seconds
+          ? new Date(t.seconds * 1000)
+          : new Date(t);
+      return d.toLocaleString("ja-JP");
+    } catch (e) {
+      return String(t);
+    }
+  };
+
   return (
     <main className={styles.container}>
       <header className={styles.tabs}>
@@ -488,6 +678,7 @@ export default function StudentDashboardIdPage() {
           }`}
           onClick={() => setActiveTab("profile")}
         >
+          プロフィール 
           プロフィール
         </button>
       </header>
@@ -497,49 +688,242 @@ export default function StudentDashboardIdPage() {
           <h1 className={styles.title}>支払い状況</h1>
           <div className={styles.infoBox}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div>コース: {courseDisplayName}</div>
-              <div style={{ marginLeft: 8 }}>
-                {session?.user &&
-                (session.user.isAdmin || session.user.role === "teacher") ? (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "#666",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <label
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+              <div style={{ display: "block", marginBottom: 8 }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    marginLeft: 8,
+                    fontWeight: 600,
+                    fontSize: 13,
+                    color: "#0b1220",
+                  }}
+                >
+                  {courseDisplayName}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  marginBottom: 12,
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  {session?.user &&
+                  (session.user.isAdmin || session.user.role === "teacher") ? (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "#374151",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        background: "#ffffff",
+                        padding: "8px",
+                        borderRadius: 10,
+                        border: "1px solid #e6e332",
+                      }}
                     >
-                      割引:
-                      <input
-                        type="number"
-                        value={discountInput}
-                        onChange={(e) => setDiscountInput(e.target.value)}
-                        placeholder="例: 5000"
-                        style={{ width: 110, padding: "4px 8px" }}
-                      />
-                    </label>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button
-                        className={styles.primaryBtn}
-                        onClick={() => handleDiscountChange(discountInput)}
-                        type="button"
-                      >
-                        保存
-                      </button>
+                      {/* New discount inputs (single-line, per requirement) */}
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <input
+                          type="text"
+                          value={newReason}
+                          onChange={(e) => setNewReason(e.target.value)}
+                          placeholder="割引理由（数字禁止）"
+                          style={{
+                            width: 300,
+                            padding: "8px 10px",
+                            height: 36,
+                            borderRadius: 8,
+                            border: "1px solid #e6eef8",
+                            background: "#fff",
+                            color: "#0b1220",
+                          }}
+                        />
+                        <input
+                          type="number"
+                          value={newAmount}
+                          onChange={(e) => setNewAmount(e.target.value)}
+                          placeholder="割引額"
+                          min={0}
+                          max={999999}
+                          style={{
+                            width: 140,
+                            padding: "8px 10px",
+                            height: 36,
+                            borderRadius: 8,
+                            border: "1px solid #e6eef8",
+                            background: "#fff",
+                            color: "#0b1220",
+                          }}
+                        />
+                        <button
+                          className={styles.primaryBtn}
+                          onClick={handleAddDiscount}
+                          type="button"
+                          style={{
+                            padding: "8px 12px",
+                            background: "#2563eb",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: 8,
+                            boxShadow: "0 2px 6px rgba(37,99,235,0.12)",
+                          }}
+                        >
+                          保存
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    割引: {appliedDiscount.toLocaleString()}円
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ fontSize: 13, color: "#374151" }}>
+                      {/* 合計割引: {totalDiscount.toLocaleString()}円 */}
+                    </div>
+                  )}
+                </div>
+
               </div>
             </div>
           </div>
+
+          {/* Discount items list (real-time) */}
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
+            <strong>割引履歴</strong>
+            <div
+              style={{
+                marginTop: 8,
+                background: "#fff",
+                borderRadius: 8,
+                border: "1px solid #efefef",
+                padding: 12,
+              }}
+            >
+              {(!discounts || discounts.length === 0) && (
+                <div style={{ color: "#666" }}>割引はありません。</div>
+              )}
+              {(discounts || []).map((d) => (
+                <div
+                  key={d.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 6px",
+                    borderBottom: "1px solid #f3f4f6",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ minWidth: 220 }}>
+                      <div style={{ fontWeight: 700 }}>{d.reason}</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                        {d.teacher || "N/A"}
+                        {d.createdAt ? ` ・ ${formatTimestamp(d.createdAt)}` : ""}
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 700 }}>¥{Number(d.amount || 0).toLocaleString()}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className={styles.secondaryBtn}
+                      onClick={() => openEditModal(d)}
+                      title="編集"
+                      type="button"
+                    >
+                      編集
+                    </button>
+                    <button
+                      className={styles.secondaryBtn}
+                      onClick={() => handleDeleteDiscount(d.id)}
+                      title="削除"
+                      type="button"
+                    >
+                      削除
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Edit Modal */}
+          {isEditModalOpen && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              style={{
+                position: "fixed",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(0,0,0,0.4)",
+                zIndex: 60,
+              }}
+              onClick={closeEditModal}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: 560,
+                  maxWidth: "95%",
+                  background: "#fff",
+                  borderRadius: 12,
+                  padding: 20,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                }}
+              >
+                <h3 style={{ marginTop: 0 }}>割引を編集</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引理由（数字禁止）</label>
+                  <input
+                    type="text"
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="例: 奨学金・成績優秀など"
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #e6eef8",
+                      width: "100%",
+                    }}
+                  />
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引額</label>
+                  <input
+                    type="number"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    placeholder="例: 5000"
+                    min={0}
+                    max={999999}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "1px solid #e6eef8",
+                      width: "200px",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                    <button
+                      className={styles.secondaryBtn}
+                      onClick={closeEditModal}
+                      type="button"
+                    >
+                      キャンセル
+                    </button>
+                    <button
+                      className={styles.primaryBtn}
+                      onClick={applyEditDiscount}
+                      type="button"
+                    >
+                      保存
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className={styles["progress-row"]}>
             <span className={styles.label}>支払い進捗</span>
@@ -553,10 +937,10 @@ export default function StudentDashboardIdPage() {
           </div>
 
           <div className={styles.stats}>
-            <article className={styles.stat}>
+                        <article className={styles.stat}>
               <div className={styles["stat-label"]}>総学費</div>
               <div className={styles["stat-value"]}>
-                {total.toLocaleString()}円
+                {reducedTotal.toLocaleString()}円
               </div>
             </article>
             <article className={styles.stat}>
@@ -565,6 +949,12 @@ export default function StudentDashboardIdPage() {
                 {paid.toLocaleString()}円
               </div>
             </article>
+            {/* <article className={styles.stat}>
+              <div className={styles["stat-label"]}>割引合計</div>
+              <div className={styles["stat-value"]}>
+                {totalDiscount.toLocaleString()}円
+              </div>
+            </article> */}
             <article className={styles.stat}>
               <div className={styles["stat-label"]}>残り</div>
               <div className={`${styles["stat-value"]} ${styles.remain}`}>
@@ -591,15 +981,6 @@ export default function StudentDashboardIdPage() {
                     <td>¥{p.amount?.toLocaleString()}</td>
                     <td>{p.paymentMethod || "-"}</td>
                     <td>
-                      <span
-                        className={`${styles.status} ${
-                          p.status === "支払い済み"
-                            ? styles.paid
-                            : styles.unpaid
-                        }`}
-                      >
-                        {p.status}
-                      </span>
                       <div style={{ marginTop: 8 }}>
                         <div
                           style={{
@@ -697,126 +1078,140 @@ export default function StudentDashboardIdPage() {
       )}
 
       {activeTab === "upload" && (
-  <section className={styles.card}>
-    <h2>レシートをアップロード</h2>
+        <section className={styles.card}>
+          <h2>レシートをアップロード</h2>
 
-   <section
-  style={{
-    background: "#fff",
-    padding: 30,
-    borderRadius: 16,
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-    margin: "20px auto",
-    width: "100%",
-    maxWidth: 600,
-    textAlign: "center",
-  }}
->
+          <section
+            style={{
+              background: "#fff",
+              padding: 30,
+              borderRadius: 16,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              margin: "20px auto",
+              width: "100%",
+              maxWidth: 600,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+              {/* 月額 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  月額
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="例: 86000"
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
+                />
+              </div>
 
+              {/* 対象月 */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  対象月
+                </label>
+                <input
+                  type="month"
+                  value={receiptMonth}
+                  onChange={(e) => setReceiptMonth(e.target.value)}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
+                />
+              </div>
 
-  <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
-    {/* 月額 */}
-    <div style={{ textAlign: "left", width: "100%" }}>
-      <label style={{ fontWeight: 600, marginBottom: 6, display: "block" }}>
-        月額
-      </label>
-      <input
-        type="number"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        placeholder="例: 86000"
-        style={{
-          padding: "12px 14px",
-          borderRadius: 10,
-          border: "1px solid #ddd",
-          width: "100%",
-          background: "#fafafa",
-        }}
-      />
-    </div>
+              {/* ファイル */}
+              <div style={{ textAlign: "left", width: "100%" }}>
+                <label
+                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
+                >
+                  ファイル
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFile(e.target.files && e.target.files[0])}
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
+                    width: "100%",
+                    background: "#fafafa",
+                  }}
+                />
+              </div>
 
-    {/* 対象月 */}
-    <div style={{ textAlign: "left", width: "100%" }}>
-      <label style={{ fontWeight: 600, marginBottom: 6, display: "block" }}>
-        対象月
-      </label>
-      <input
-        type="month"
-        value={receiptMonth}
-        onChange={(e) => setReceiptMonth(e.target.value)}
-        style={{
-          padding: "12px 14px",
-          borderRadius: 10,
-          border: "1px solid #ddd",
-          width: "100%",
-          background: "#fafafa",
-        }}
-      />
-    </div>
+              {/* Centered Button */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: 10,
+                }}
+              >
+                <button
+                  onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                  disabled={uploading}
+                  style={{
+                    padding: "12px 0",
+                    width: "50%",
+                    maxWidth: 250,
+                    background: "#0070F3",
+                    color: "#fff",
+                    fontWeight: 700,
+                    borderRadius: 10,
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  {uploading ? "アップロード中..." : "OK"}
+                </button>
+              </div>
 
-    {/* ファイル */}
-    <div style={{ textAlign: "left", width: "100%" }}>
-      <label style={{ fontWeight: 600, marginBottom: 6, display: "block" }}>
-        ファイル
-      </label>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setFile(e.target.files && e.target.files[0])}
-        style={{
-          padding: 12,
-          borderRadius: 10,
-          border: "1px solid #ddd",
-          width: "100%",
-          background: "#fafafa",
-        }}
-      />
-    </div>
-
-    {/* Centered Button */}
-    <div style={{ display: "flex", justifyContent: "center", marginTop: 10 }}>
-      <button
-        onClick={() => handleReceiptUpload(receiptMonth || undefined)}
-        disabled={uploading}
-        style={{
-          padding: "12px 0",
-          width: "50%",
-          maxWidth: 250,
-          background: "#0070F3",
-          color: "#fff",
-          fontWeight: 700,
-          borderRadius: 10,
-          border: "none",
-          cursor: "pointer",
-          textAlign: "center",
-        }}
-      >
-        {uploading ? "アップロード中..." : "OK"}
-      </button>
-    </div>
-
-    {uploading && (
-      <div style={{ textAlign: "center", marginTop: 6, color: "#666" }}>
-        進捗: {uploadProgress}%
-      </div>
-    )}
-  </div>
-</section>
-
-
-  </section>
-)}
-
+              {uploading && (
+                <div
+                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
+                >
+                  進捗: {uploadProgress}%
+                </div>
+              )}
+            </div>
+          </section>
+        </section>
+      )}
 
       {activeTab === "profile" && (
         <section className={styles.card}>
           <h2>プロフィール</h2>
+          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
           <div
             style={{
               padding: 12,
               border: "1px solid #eee",
               borderRadius: 8,
               background: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
             }}
           >
             <p style={{ margin: "6px 0" }}>

@@ -15,7 +15,9 @@
 
 /* ----- Card ----- */
 .card {
-  width: min(92vw, 420px);
+  /* Use parent-contained width so it truly centers within padded containers */
+  width: min(100%, 420px);
+  margin-inline: auto;
   padding: 48px 40px;
 
   background: rgba(255, 255, 255, 0.9);
@@ -220,5 +222,32 @@
 
   .title {
     font-size: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    padding: 16px;
+  }
+  .googleButton {
+    padding: 16px 16px;
+    font-size: 15px;
+  }
+  .logoDot {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 400px) {
+  .card {
+    padding: 30px 20px;
+  }
+  .title {
+    font-size: 26px;
+  }
+  .googleButton {
+    padding: 14px 14px;
+    font-size: 14.5px;
   }
 }

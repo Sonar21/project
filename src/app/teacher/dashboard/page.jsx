@@ -8,16 +8,7 @@ import StatCard from "@/components/StatCard";
 import RecentActivity from "@/components/RecentActivity";
 import { db } from "@/firebase/clientApp";
 
-
-import {
-  collection,
-  onSnapshot,
-  query,
-  orderBy,
-  limit,
-} from "firebase/firestore";
-
-
+import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 
 export default function TeacherDashboard() {
   const { data: session } = useSession();
