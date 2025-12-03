@@ -760,7 +760,7 @@ export default function StudentDashboardIdPage() {
           }`}
           onClick={() => setActiveTab("profile")}
         >
-          プロフィール プロフィール
+          プロフィール 
         </button>
       </header>
 
@@ -768,45 +768,18 @@ export default function StudentDashboardIdPage() {
         <section className={styles.card}>
           <h1 className={styles.title}>支払い状況</h1>
           <div className={styles.infoBox}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ display: "block", marginBottom: 8 }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    marginLeft: 8,
-                    fontWeight: 600,
-                    fontSize: 13,
-                    color: "#0b1220",
-                  }}
-                >
+            <div className={styles.rowFlexCenterGap12}>
+              <div className={styles.blockMb8}>
+                <span className={styles.courseNameSpan}>
                   {courseDisplayName}
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  marginBottom: 12,
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <div style={{ flex: 1 }}>
+              <div className={styles.flexRowMb12CenterGap12}>
+                <div className={styles.flex1}>
                   {session?.user &&
                   (session.user.isAdmin || session.user.role === "teacher") ? (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#374151",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 12,
-                        background: "#ffffff",
-                        padding: "8px",
-                        borderRadius: 10,
-                        border: "1px solid #e6e332",
-                      }}
-                    >
+                    <div className={styles.adminBox}>
                       {/* New discount inputs (single-line, responsive) */}
                       <div className={styles.discountRow}>
                         <input
@@ -845,48 +818,31 @@ export default function StudentDashboardIdPage() {
           </div>
 
           {/* Discount items list (real-time) */}
-          <div style={{ marginTop: 12, marginBottom: 12 }}>
+          <div className={styles.discountSection}>
             <strong>割引履歴</strong>
-            <div
-              style={{
-                marginTop: 8,
-                background: "#fff",
-                borderRadius: 8,
-                border: "1px solid #efefef",
-                padding: 12,
-              }}
-            >
+            <div className={styles.discountListBox}>
               {(!discounts || discounts.length === 0) && (
                 <div style={{ color: "#666" }}>割引はありません。</div>
               )}
               {(discounts || []).map((d) => (
-                <div
-                  key={d.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "8px 6px",
-                    borderBottom: "1px solid #f3f4f6",
-                  }}
-                >
-                  <div
-                    style={{ display: "flex", gap: 12, alignItems: "center" }}
-                  >
-                    <div style={{ minWidth: 220 }}>
-                      <div style={{ fontWeight: 700 }}>{d.reason}</div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                <div key={d.id} className={styles.discountItem}>
+                  <div className={styles.discountItemLeft}>
+                    <div className={styles.discountReasonBlock}>
+                      <div className={styles.discountReasonTitle}>
+                        {d.reason}
+                      </div>
+                      <div className={styles.discountMeta}>
                         {d.teacher || "N/A"}
                         {d.createdAt
                           ? ` ・ ${formatTimestamp(d.createdAt)}`
                           : ""}
                       </div>
                     </div>
-                    <div style={{ fontWeight: 700 }}>
+                    <div className={styles.discountAmountValue}>
                       ¥{Number(d.amount || 0).toLocaleString()}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className={styles.discountItemActions}>
                     <button
                       className={styles.secondaryBtn}
                       onClick={() => openEditModal(d)}
@@ -914,27 +870,12 @@ export default function StudentDashboardIdPage() {
             <div
               role="dialog"
               aria-modal="true"
-              style={{
-                position: "fixed",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "rgba(0,0,0,0.4)",
-                zIndex: 60,
-              }}
+              className={styles.editModalOverlay}
               onClick={closeEditModal}
             >
               <div
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: 560,
-                  maxWidth: "95%",
-                  background: "#fff",
-                  borderRadius: 12,
-                  padding: 20,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                }}
+                className={styles.editModalContent}
               >
                 <h3 style={{ marginTop: 0 }}>割引を編集</h3>
                 <div
@@ -948,12 +889,7 @@ export default function StudentDashboardIdPage() {
                     value={editReason}
                     onChange={(e) => setEditReason(e.target.value)}
                     placeholder="例: 奨学金・成績優秀など"
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e6eef8",
-                      width: "100%",
-                    }}
+                    className={styles.editInputText}
                   />
                   <label style={{ fontSize: 13, fontWeight: 600 }}>
                     割引額
@@ -965,21 +901,9 @@ export default function StudentDashboardIdPage() {
                     placeholder="例: 5000"
                     min={0}
                     max={999999}
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e6eef8",
-                      width: "200px",
-                    }}
+                    className={styles.editInputNumber}
                   />
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      justifyContent: "flex-end",
-                      marginTop: 8,
-                    }}
-                  >
+                  <div className={styles.editActions}>
                     <button
                       className={styles.secondaryBtn}
                       onClick={closeEditModal}
@@ -1170,115 +1094,55 @@ export default function StudentDashboardIdPage() {
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
 
-          <section
-            style={{
-              background: "#fff",
-              padding: 30,
-              borderRadius: 16,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              margin: "20px auto",
-              width: "100%",
-              maxWidth: 600,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+          <section className={styles.uploadSection}>
+            <div className={styles.uploadForm}>
               {/* 月額 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  月額
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>月額</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* 対象月 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  対象月
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>対象月</label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* ファイル */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  ファイル
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>ファイル</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadFileInput}
                 />
               </div>
 
               {/* Centered Button */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  marginTop: 10,
-                }}
-              >
+              <div className={styles.uploadBtnWrap}>
                 <button
                   onClick={() => handleReceiptUpload(receiptMonth || undefined)}
                   disabled={uploading}
-                  style={{
-                    padding: "12px 0",
-                    width: "50%",
-                    maxWidth: 250,
-                    background: "#0070F3",
-                    color: "#fff",
-                    fontWeight: 700,
-                    borderRadius: 10,
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "center",
-                  }}
+                  className={styles.uploadBtn}
                 >
                   {uploading ? "アップロード中..." : "OK"}
                 </button>
               </div>
 
               {uploading && (
-                <div
-                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
-                >
+                <div className={styles.uploadProgress}>
                   進捗: {uploadProgress}%
                 </div>
               )}
@@ -1289,8 +1153,8 @@ export default function StudentDashboardIdPage() {
 
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2>プロフィール</h2>
-          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
+         
+       
           <div
             style={{
               padding: 12,

@@ -941,7 +941,7 @@ export default function StudentDashboardPage() {
 
   return (
     <main className={styles.container}>
-      {/* 🔹 タブメニュー */}
+      {/* 🔹 セグメントナビ（上部・モバイル優先） */}
       <header className={styles.tabs}>
         <button
           className={`${styles.tab} ${
@@ -1036,45 +1036,27 @@ export default function StudentDashboardPage() {
             )}
           </div>
 
-          <table className={styles.paymentTable}>
-            <tbody>
-              {payments.map((p) => {
-                const date = p.createdAt?.toDate
-                  ? p.createdAt.toDate()
-                  : new Date();
-                //  日付と時間を日本語形式で表示
-                const formattedDate = date.toLocaleDateString("ja-JP");
-                const formattedTime = date.toLocaleTimeString("ja-JP", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                });
-                return (
-                  <tr key={p.id}>
-                    <td>{formattedDate}</td>
-                    <td>{formattedTime}</td>
-                    <td>¥{p.amount?.toLocaleString()}</td>
-                    <td>{p.paymentMethod || "-"}</td>
-                    <td>
-                      <span
-                        className={`${styles.status} ${
-                          p.status === "支払い済み"
-                            ? styles.paid
-                            : styles.unpaid
-                        }`}
-                      >
-                        {p.status}
-                      </span>
-
-                      <div style={{ marginTop: 8 }}>
-                        <div
-                          style={{
-                            marginTop: 8,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                            gap: 8,
-                          }}
-                        >
+          <div className={styles.tableWrap}>
+            <table className={styles.paymentTable}>
+              <tbody>
+                {payments.map((p) => {
+                  const date = p.createdAt?.toDate
+                    ? p.createdAt.toDate()
+                    : new Date();
+                  //  日付と時間を日本語形式で表示
+                  const formattedDate = date.toLocaleDateString("ja-JP");
+                  const formattedTime = date.toLocaleTimeString("ja-JP", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  return (
+                    <tr key={p.id}>
+                      <td data-label="日付">{formattedDate}</td>
+                      <td data-label="時間">{formattedTime}</td>
+                      <td data-label="金額">¥{p.amount?.toLocaleString()}</td>
+                      <td data-label="支払方法">{p.paymentMethod || "-"}</td>
+                      <td data-label="レシート">
+                        <div className={styles.paymentAction}>
                           {p.receiptBase64 ? (
                             <img
                               src={p.receiptBase64}
@@ -1104,13 +1086,13 @@ export default function StudentDashboardPage() {
                             削除
                           </button>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
           {/* lightbox modal for clicked image */}
           {lightboxSrc && (
             <div
@@ -1159,115 +1141,55 @@ export default function StudentDashboardPage() {
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
 
-          <section
-            style={{
-              background: "#fff",
-              padding: 30,
-              borderRadius: 16,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              margin: "20px auto",
-              width: "100%",
-              maxWidth: 600,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+          <section className={styles.uploadSection}>
+            <div className={styles.uploadForm}>
               {/* 月額 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  月額
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>月額</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* 対象月 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  対象月
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>対象月</label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* ファイル */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  ファイル
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>ファイル</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadFileInput}
                 />
               </div>
 
               {/* Centered Button */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  marginTop: 10,
-                }}
-              >
+              <div className={styles.uploadBtnWrap}>
                 <button
                   onClick={() => handleReceiptUpload(receiptMonth || undefined)}
                   disabled={uploading}
-                  style={{
-                    padding: "12px 0",
-                    width: "50%",
-                    maxWidth: 250,
-                    background: "#0070F3",
-                    color: "#fff",
-                    fontWeight: 700,
-                    borderRadius: 10,
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "center",
-                  }}
+                  className={styles.uploadBtn}
                 >
                   {uploading ? "アップロード中..." : "OK"}
                 </button>
               </div>
 
               {uploading && (
-                <div
-                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
-                >
+                <div className={styles.uploadProgress}>
                   進捗: {uploadProgress}%
                 </div>
               )}
@@ -1303,6 +1225,7 @@ export default function StudentDashboardPage() {
           </div>
         </section>
       )}
+      {/* bottom nav removed per design preference */}
     </main>
   );
 }
