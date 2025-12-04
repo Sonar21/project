@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { db } from "@/firebase/clientApp";
@@ -21,8 +22,8 @@ import {
   runTransaction,
   deleteDoc,
 } from "firebase/firestore";
-// import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-// import { storage } from "@/firebase/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage } from "@/firebase/firebase";
 import styles from "./page.module.css";
 import Image from "next/image";
 import receiptStyles from "@/components/ReceiptList.module.css";
@@ -624,8 +625,9 @@ export default function StudentDashboardPage() {
           );
           qsnap = await getDocs(q);
         }
+
         if (qsnap && !qsnap.empty) {
-          const docSnap = qsnap.docs[0];c
+          const docSnap = qsnap.docs[0];
           const d = docSnap.data();
 
           // 2️⃣ 金額の取得: コース側に total (fee) があれば優先、無ければ monthly を使う
@@ -1000,7 +1002,7 @@ export default function StudentDashboardPage() {
                 {total.toLocaleString()}円
                 {discount > 0 && (
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
-                    減免: -¥{discount.toLocaleString()}（元: ¥
+                    割引: -¥{discount.toLocaleString()}（元: ¥
                     {baseTotal.toLocaleString()}）
                   </div>
                 )}
@@ -1223,6 +1225,7 @@ export default function StudentDashboardPage() {
           </div>
         </section>
       )}
-         </main>
+      {/* bottom nav removed per design preference */}
+    </main>
   );
 }
