@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { db } from "@/firebase/clientApp";
@@ -22,8 +21,8 @@ import {
   runTransaction,
   deleteDoc,
 } from "firebase/firestore";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { storage } from "@/firebase/firebase";
+// import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+// import { storage } from "@/firebase/firebase";
 import styles from "./page.module.css";
 import Image from "next/image";
 import receiptStyles from "@/components/ReceiptList.module.css";
@@ -625,7 +624,6 @@ export default function StudentDashboardPage() {
           );
           qsnap = await getDocs(q);
         }
-
         if (qsnap && !qsnap.empty) {
           const docSnap = qsnap.docs[0];c
           const d = docSnap.data();
