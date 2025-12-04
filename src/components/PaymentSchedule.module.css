@@ -1,10 +1,4 @@
-:root {
-  --gap: 8px;
-  --pad: 8px;
-  --muted: #666;
-  --border: #eee;
-  --input-border: #ddd;
-}
+/* CSS variables moved to globals.css :root to satisfy CSS Modules purity. */
 
 .yearLabel {
   margin-bottom: 12px;
@@ -26,6 +20,19 @@
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
+}
+
+/* Prevent subpixel jitter / overflow on mobile: use border-box and fixed layout */
+.table {
+  box-sizing: border-box;
+  table-layout: fixed;
+}
+
+.table td,
+.table th {
+  box-sizing: border-box;
+  min-width: 0; /* allow cells to shrink on small screens */
+  word-break: break-word;
 }
 
 .table thead th {
@@ -113,6 +120,7 @@
 .paid {
   background: linear-gradient(90deg, #10b981, #059669); /* green */
   color: #fff;
+  font-size: 8px;
 }
 
 .partial {
@@ -123,4 +131,54 @@
 .unpaid {
   background: linear-gradient(90deg, #f97316, #fb923c); /* orange */
   color: #fff;
+}
+
+/* ------------------------------
+   Responsive tweaks
+   ------------------------------ */
+@media (max-width: 640px) {
+  /* smooth native scrolling on iOS */
+  .tableWrap {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: visible;
+  }
+
+  /* make grid children allowed to shrink to avoid horizontal overflow */
+  .table tbody tr,
+  .table tbody tr > td {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* promote to its own layer to reduce repaint jitter when scrolling */
+  .table tbody tr {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  .table thead th {
+    padding: 10px 12px;
+    font-size: 8px;
+  }
+  .td,
+  .tdRight,
+  .tdCenter,
+  .thLeft,
+  .thRight,
+  .thCenter {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .inputAmount {
+    width: 96px;
+    padding: 6px 6px;
+  }
+  .receiptCell img {
+    width: 48px;
+    height: 48px;
+  }
+  .id {
+    font-size: 4px;
+    margin: 60px;
+  }
 }

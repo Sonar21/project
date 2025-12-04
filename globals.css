@@ -138,6 +138,19 @@ body {
   line-height: 1.6;
 }
 
+/* Shared CSS custom properties (for modules like PaymentSchedule) */
+:root {
+  --gap: 8px;
+  --pad: 8px;
+  --muted: #666;
+  --border: #eee;
+  --input-border: #ddd;
+  /* ReceiptList variables */
+  --bg-light: #fafafa;
+  --bg-hover: #f1f1f1;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
 /* App root flex layout so footer sits at the bottom on short pages */
 .appRoot {
   display: flex;
