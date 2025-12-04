@@ -627,7 +627,7 @@ export default function StudentDashboardPage() {
         }
 
         if (qsnap && !qsnap.empty) {
-          const docSnap = qsnap.docs[0];
+          const docSnap = qsnap.docs[0];c
           const d = docSnap.data();
 
           // 2️⃣ 金額の取得: コース側に total (fee) があれば優先、無ければ monthly を使う
