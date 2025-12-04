@@ -1,37 +1,48 @@
 /* ページコンテナ */
 .container {
   width: 100%;
-  padding: 24px;
+  padding: 20px;
   box-sizing: border-box;
 }
 
 .tabs {
+  position: sticky;
+  top: 56px; /* sits below header */
+  z-index: 50;
   width: 100%;
   max-width: 980px;
-  display: flex;
-  gap: 12px;
-  margin: 24px 0 18px;
-  
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0 14px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  padding: 8px 10px;
+  border-bottom: 1px solid #e6e6e9;
 }
 
 .tab {
-  background: transparent;
-  border: none;
-  padding: 10px 12px;
-  border-radius: 10px 10px 0 0;
-  color: var(--muted);
+  appearance: none;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: #111827;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  font-size: 14px;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .tab:hover {
-  color: var(--accent);
+  background: #e5edf9;
+  color: #111827;
 }
 
 .tab.active {
-  color: var(--accent);
-  border-bottom: 3px solid var(--accent);
+  background: #e0ecff;
+  border-color: #2563eb;
+  color: #2563eb;
 }
 
 /* active 用の単独クラスをエクスポートしておく（モジュールで扱いやすくするため） */
@@ -104,7 +115,7 @@
   border-radius: 12px;
   padding: 20px;
   border: 1px solid #eef2f6;
-  box-shadow: 0 6px 18px rgba(11, 23, 47, 0.04);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
   width: 100%;
   align-items: ce;
 }
@@ -118,9 +129,9 @@
 
 .progressBar {
   flex: 1;
-  height: 12px;
-  background: #eef2ff;
-  border-radius: 8px;
+  height: 14px;
+  background: #f1f5ff;
+  border-radius: 999px;
   overflow: hidden;
 }
 
@@ -129,6 +140,7 @@
   background: #2563eb;
   width: 30%;
   transition: width 0.45s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.18);
 }
 
 .progressText {
@@ -167,11 +179,11 @@
 
 .infoBox {
   margin-top: 8px;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 14px;
+  border-radius: 10px;
   background: #fff9e6;
   border: 1px solid #fff0d9;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .deadline {
@@ -190,9 +202,13 @@
   color: white;
   border: none;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
+}
+
+.primaryBtn:hover {
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
 }
 
 /* カード */
@@ -200,16 +216,16 @@
   width: 100%;
   max-width: 980px;
   background: var(--card);
-  border-radius: 18px;
-  padding: 24px;
-  box-shadow: 0 8px 30px rgba(30, 41, 59, 0.06);
-  backdrop-filter: blur(6px);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(4px);
   border: 1px solid rgba(15, 23, 42, 0.03);
 }
 
 /* タイトル */
 .title {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 20px;
   color: #0f172a;
 }
@@ -264,8 +280,8 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), var(--glass));
   padding: 14px;
   border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 4px 18px rgba(2, 6, 23, 0.03);
+  text-align: left;
+  box-shadow: 0 3px 10px rgba(2, 6, 23, 0.03);
   border: 1px solid rgba(2, 6, 23, 0.03);
 }
 
@@ -278,15 +294,16 @@
   margin-top: 8px;
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: #4d82fd;
+  text-align: center;
 }
 
 .stat-value.paid {
-  color: var(--success);
+  color: green;
 }
 
 .stat-value.remain {
-  color: var(--warn);
+  color: red;
 }
 
 /* 支払い状態用の単体クラス（モジュールで利用するため） */
@@ -335,7 +352,7 @@
   gap: 8px;
 }
 .card {
-  padding: 18px;
+  padding: 16px;
 }
 
 .secondaryBtn {
@@ -346,6 +363,17 @@
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  transition: background-color 0.18s ease, color 0.18s ease,
+    box-shadow 0.16s ease, transform 0.12s ease;
+}
+
+.secondaryBtn:hover,
+.secondaryBtn:active {
+  background: #eb2553;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+  transform: translateY(1px);
 }
 
 /* right */
@@ -355,6 +383,7 @@
   padding: 18px;
   border: 1px solid #eef2f6;
   height: fit-content;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
 }
 
 .profileBox {
@@ -451,12 +480,12 @@
 .paymentTable {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 14px;
 }
 .paymentTable thead th {
   text-align: left;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: #fafafa;
   border-bottom: 1px solid #eef2f6;
   color: #374151;
@@ -506,9 +535,9 @@
 .paymentTable {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 12px;
-  margin-top: 16px;
-  font-size: 15px;
+  border-spacing: 0 10px;
+  margin-top: 14px;
+  font-size: 14px;
   table-layout: fixed;
 }
 
@@ -523,19 +552,25 @@
 .paymentTable tbody tr {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(11, 23, 47, 0.05);
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .paymentTable tbody tr:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(11, 23, 47, 0.08);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
 }
 
 .paymentTable tbody td {
-  padding: 14px 18px;
+  padding: 10px 14px;
   vertical-align: middle;
   background: #fff;
+}
+
+.paymentAction button {
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
 }
 
 /* 丸み */
@@ -568,7 +603,7 @@
 
 .paymentTable tbody td:nth-child(5) {
   text-align: right;
-  width: 260px;
+  width: 240px;
 }
 
 /* ステータス */
@@ -622,6 +657,10 @@
 }
 
 @media (max-width: 560px) {
+  .container {
+    padding: 14px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
   .amountRow {
     flex-direction: column;
   }
@@ -632,5 +671,284 @@
   .progressText {
     text-align: left;
     margin-top: 6px;
+  }
+  .card {
+    border-radius: 14px;
+  }
+
+  /* Tighter payment card spacing on small screens */
+  .paymentTable {
+    border-spacing: 0 8px;
+  }
+  /* hide payment method column on very small screens */
+  .paymentTable thead th:nth-child(4),
+  .paymentTable tbody td:nth-child(4) {
+    display: none;
+  }
+}
+
+/* New: tabs wrap on narrow screens and reduce padding */
+@media (max-width: 640px) {
+  .tabs {
+    top: 48px;
+    gap: 6px;
+    margin: 8px 0 10px;
+    padding: 6px 8px;
+  }
+  .tab {
+    padding: 8px 8px;
+    font-size: 11px;
+  }
+}
+
+/* New: prevent table overflow on mobile */
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.paymentAction {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Compact table for mobile: turn rows into stacked cards (mobile-only) */
+@media (max-width: 640px) {
+  .paymentTable {
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    font-size: 14px;
+    display: flex;
+  }
+  .paymentTable thead {
+    display: none;
+  }
+  /* hide payment method column on mobile so '銀行振込' doesn't show */
+  .paymentTable tbody td:nth-child(4) {
+    display: none;
+  }
+  .paymentTable tbody tr {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    padding: 10px 10px 12px;
+  }
+  .paymentTable tbody td {
+    padding: 4px 4px;
+  }
+  /* Date and time side by side; others full width */
+  .paymentTable tbody td:nth-child(1),
+  .paymentTable tbody td:nth-child(2) {
+    color: #6b7280;
+    width: auto;
+    white-space: nowrap;
+  }
+  .paymentTable tbody td:nth-child(3),
+  .paymentTable tbody td:nth-child(4),
+  .paymentTable tbody td:nth-child(5) {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+  .paymentTable tbody td::before {
+    /* content: attr(data-label); */
+    display: block;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 2px;
+  }
+  .paymentTable tbody td:nth-child(3) {
+    font-weight: 700;
+  }
+  .paymentTable button {
+    padding: 10px 14px;
+    border-radius: 10px;
+    min-height: 40px;
+  }
+
+  /* Mobile-only layout for receipt + delete */
+  .paymentAction {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* thumbnail + delete button sizing for mobile */
+  .paymentAction img,
+  .paymentTable .receiptThumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  .paymentAction button {
+    height: 36px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+}
+
+/* Ensure floating widgets don't overlap content on small screens */
+.safe-bottom {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+/* bottom nav removed per design preference */
+
+/* New: ensure stat grid stacks to 2 then 1 columns */
+@media (max-width: 780px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================
+   Receipt Upload Section
+   ===================== */
+.uploadSection {
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin: 20px auto;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.uploadForm {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.uploadField {
+  text-align: left;
+  width: 100%;
+}
+
+.uploadLabel {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+  color: #374151;
+}
+
+.uploadInput {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  width: 100%;
+  background: #fafafa;
+  font-size: 16px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.uploadInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.uploadFileInput {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  width: 100%;
+  background: #fafafa;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.uploadBtnWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.uploadBtn {
+  padding: 14px 0;
+  width: 100%;
+  max-width: 250px;
+  background: #0070f3;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+  font-size: 16px;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.uploadBtn:hover {
+  background: #005bb5;
+}
+
+.uploadBtn:active {
+  transform: scale(0.98);
+}
+
+.uploadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.uploadProgress {
+  text-align: center;
+  margin-top: 6px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Mobile responsive styles for upload section */
+@media (max-width: 640px) {
+  .uploadSection {
+    padding: 20px 16px;
+    margin: 12px auto;
+    border-radius: 12px;
+  }
+
+  .uploadForm {
+    gap: 20px;
+  }
+
+  .uploadInput,
+  .uploadFileInput {
+    padding: 14px 12px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .uploadBtn {
+    width: 100%;
+    max-width: none;
+    padding: 16px 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .uploadSection {
+    padding: 16px 12px;
+    margin: 8px auto;
+  }
+
+  .uploadForm {
+    gap: 16px;
+  }
+
+  .uploadLabel {
+    font-size: 14px;
   }
 }

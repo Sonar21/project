@@ -42,6 +42,7 @@ export default function StudentDashboardIdPage() {
   const [amount, setAmount] = useState("");
   const [receiptMonth, setReceiptMonth] = useState("");
   const [payments, setPayments] = useState([]);
+  const [prevYearRemaining, setPrevYearRemaining] = useState(null);
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const params = useParams();
   const routeId = params?.id;
@@ -238,7 +239,9 @@ export default function StudentDashboardIdPage() {
       return alert("割引額は 0 〜 999,999 の範囲で入力してください。");
 
     if ((discounts || []).length >= 5)
-      return alert("割引レコードは最大5件までです。既存の割引を削除してください。");
+      return alert(
+        "割引レコードは最大5件までです。既存の割引を削除してください。"
+      );
 
     try {
       const ref = collection(db, "students", String(student.id), "discounts");
@@ -287,7 +290,8 @@ export default function StudentDashboardIdPage() {
   };
 
   const applyEditDiscount = async () => {
-    if (!student?.id || !editDiscountId) return alert("学生情報または割引IDが見つかりません。");
+    if (!student?.id || !editDiscountId)
+      return alert("学生情報または割引IDが見つかりません。");
     const reason = String(editReason || "").trim();
     const amountNum = Number(editAmount);
 
@@ -526,6 +530,79 @@ export default function StudentDashboardIdPage() {
     };
   }, [student?.studentId]);
 
+  // Compute previous academic year's remaining amount (academic year starts in April)
+  useEffect(() => {
+    if (!student?.id) return;
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const today = new Date();
+        const academicYear =
+          today.getMonth() + 1 >= 4
+            ? today.getFullYear()
+            : today.getFullYear() - 1;
+
+        // Determine entranceYear from stored student or parse from studentId
+        const parsedYearCode = parseInt(
+          String(student.studentId || "").slice(1, 3),
+          10
+        );
+        let parsedEntranceYear =
+          2000 + (Number.isFinite(parsedYearCode) ? parsedYearCode : 0);
+        if (parsedEntranceYear > academicYear) parsedEntranceYear -= 100;
+        const entranceYear = student.entranceYear || parsedEntranceYear;
+
+        const gradeNum = academicYear - entranceYear + 1;
+
+        // previous academic year to consider (the year that just finished if student promoted)
+        const prevAcademicYear = academicYear - 1;
+
+        // only compute for students who may have a previous-year remainder (grade >=2)
+        if (gradeNum < 2) {
+          if (mounted) setPrevYearRemaining(0);
+          return;
+        }
+
+        // read paymentSchedules subcollection and sum months for prevAcademicYear
+        const schedRef = collection(
+          db,
+          "students",
+          String(student.id),
+          "paymentSchedules"
+        );
+        const snap = await getDocs(schedRef);
+        if (!mounted) return;
+        const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const prevDocs = docs.filter(
+          (d) =>
+            typeof d.month === "string" &&
+            d.month.startsWith(`${prevAcademicYear}-`)
+        );
+
+        const totalDue = prevDocs.reduce(
+          (s, d) => s + (Number(d.dueAmount) || 0),
+          0
+        );
+        const totalPaid = prevDocs.reduce(
+          (s, d) => s + (Number(d.paidAmount) || 0),
+          0
+        );
+        const remainingPrev = Math.max(totalDue - totalPaid, 0);
+
+        if (mounted) setPrevYearRemaining(remainingPrev);
+      } catch (err) {
+        console.error("Failed to compute previous year remaining:", err);
+        if (mounted) setPrevYearRemaining(null);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [student?.id, student?.studentId, student?.entranceYear]);
+
   // The rest of the rendering logic mirrors the main dashboard component.
   if (status === "loading" || loading) {
     return (
@@ -571,7 +648,12 @@ export default function StudentDashboardIdPage() {
   const paid = paidFromPayments || Number(student?.paidAmount || 0);
 
   // remaining = reduced total - paid
-  const remaining = Math.max(reducedTotal - paid, 0);
+  const remainingBase = Math.max(reducedTotal - paid, 0);
+  // 合算表示: 前年度残を含める
+  const remaining = Math.max(
+    (remainingBase || 0) + (prevYearRemaining || 0),
+    0
+  );
 
   // progress uses paid / reducedTotal (if reducedTotal is zero, progress = 0)
   const progress =
@@ -679,7 +761,6 @@ export default function StudentDashboardIdPage() {
           onClick={() => setActiveTab("profile")}
         >
           プロフィール 
-          プロフィール
         </button>
       </header>
 
@@ -687,61 +768,26 @@ export default function StudentDashboardIdPage() {
         <section className={styles.card}>
           <h1 className={styles.title}>支払い状況</h1>
           <div className={styles.infoBox}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ display: "block", marginBottom: 8 }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    marginLeft: 8,
-                    fontWeight: 600,
-                    fontSize: 13,
-                    color: "#0b1220",
-                  }}
-                >
+            <div className={styles.rowFlexCenterGap12}>
+              <div className={styles.blockMb8}>
+                <span className={styles.courseNameSpan}>
                   {courseDisplayName}
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  marginBottom: 12,
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <div style={{ flex: 1 }}>
+              <div className={styles.flexRowMb12CenterGap12}>
+                <div className={styles.flex1}>
                   {session?.user &&
                   (session.user.isAdmin || session.user.role === "teacher") ? (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#374151",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        background: "#ffffff",
-                        padding: "8px",
-                        borderRadius: 10,
-                        border: "1px solid #e6e332",
-                      }}
-                    >
-                      {/* New discount inputs (single-line, per requirement) */}
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <div className={styles.adminBox}>
+                      {/* New discount inputs (single-line, responsive) */}
+                      <div className={styles.discountRow}>
                         <input
                           type="text"
                           value={newReason}
                           onChange={(e) => setNewReason(e.target.value)}
                           placeholder="割引理由（数字禁止）"
-                          style={{
-                            width: 300,
-                            padding: "8px 10px",
-                            height: 36,
-                            borderRadius: 8,
-                            border: "1px solid #e6eef8",
-                            background: "#fff",
-                            color: "#0b1220",
-                          }}
+                          className={styles.discountInput}
                         />
                         <input
                           type="number"
@@ -750,28 +796,12 @@ export default function StudentDashboardIdPage() {
                           placeholder="割引額"
                           min={0}
                           max={999999}
-                          style={{
-                            width: 140,
-                            padding: "8px 10px",
-                            height: 36,
-                            borderRadius: 8,
-                            border: "1px solid #e6eef8",
-                            background: "#fff",
-                            color: "#0b1220",
-                          }}
+                          className={styles.discountAmount}
                         />
                         <button
-                          className={styles.primaryBtn}
                           onClick={handleAddDiscount}
                           type="button"
-                          style={{
-                            padding: "8px 12px",
-                            background: "#2563eb",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 8,
-                            boxShadow: "0 2px 6px rgba(37,99,235,0.12)",
-                          }}
+                          className={styles.discountSave}
                         >
                           保存
                         </button>
@@ -779,52 +809,40 @@ export default function StudentDashboardIdPage() {
                     </div>
                   ) : (
                     <div style={{ fontSize: 13, color: "#374151" }}>
-                      {/* 合計割引: {totalDiscount.toLocaleString()}円 */}
+                      合計割引: {totalDiscount.toLocaleString()}円
                     </div>
                   )}
                 </div>
-
               </div>
             </div>
           </div>
 
           {/* Discount items list (real-time) */}
-          <div style={{ marginTop: 12, marginBottom: 12 }}>
+          <div className={styles.discountSection}>
             <strong>割引履歴</strong>
-            <div
-              style={{
-                marginTop: 8,
-                background: "#fff",
-                borderRadius: 8,
-                border: "1px solid #efefef",
-                padding: 12,
-              }}
-            >
+            <div className={styles.discountListBox}>
               {(!discounts || discounts.length === 0) && (
                 <div style={{ color: "#666" }}>割引はありません。</div>
               )}
               {(discounts || []).map((d) => (
-                <div
-                  key={d.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "8px 6px",
-                    borderBottom: "1px solid #f3f4f6",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <div style={{ minWidth: 220 }}>
-                      <div style={{ fontWeight: 700 }}>{d.reason}</div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                <div key={d.id} className={styles.discountItem}>
+                  <div className={styles.discountItemLeft}>
+                    <div className={styles.discountReasonBlock}>
+                      <div className={styles.discountReasonTitle}>
+                        {d.reason}
+                      </div>
+                      <div className={styles.discountMeta}>
                         {d.teacher || "N/A"}
-                        {d.createdAt ? ` ・ ${formatTimestamp(d.createdAt)}` : ""}
+                        {d.createdAt
+                          ? ` ・ ${formatTimestamp(d.createdAt)}`
+                          : ""}
                       </div>
                     </div>
-                    <div style={{ fontWeight: 700 }}>¥{Number(d.amount || 0).toLocaleString()}</div>
+                    <div className={styles.discountAmountValue}>
+                      ¥{Number(d.amount || 0).toLocaleString()}
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className={styles.discountItemActions}>
                     <button
                       className={styles.secondaryBtn}
                       onClick={() => openEditModal(d)}
@@ -852,44 +870,30 @@ export default function StudentDashboardIdPage() {
             <div
               role="dialog"
               aria-modal="true"
-              style={{
-                position: "fixed",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "rgba(0,0,0,0.4)",
-                zIndex: 60,
-              }}
+              className={styles.editModalOverlay}
               onClick={closeEditModal}
             >
               <div
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: 560,
-                  maxWidth: "95%",
-                  background: "#fff",
-                  borderRadius: 12,
-                  padding: 20,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                }}
+                className={styles.editModalContent}
               >
                 <h3 style={{ marginTop: 0 }}>割引を編集</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引理由（数字禁止）</label>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>
+                    割引理由（数字禁止）
+                  </label>
                   <input
                     type="text"
                     value={editReason}
                     onChange={(e) => setEditReason(e.target.value)}
                     placeholder="例: 奨学金・成績優秀など"
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e6eef8",
-                      width: "100%",
-                    }}
+                    className={styles.editInputText}
                   />
-                  <label style={{ fontSize: 13, fontWeight: 600 }}>割引額</label>
+                  <label style={{ fontSize: 13, fontWeight: 600 }}>
+                    割引額
+                  </label>
                   <input
                     type="number"
                     value={editAmount}
@@ -897,14 +901,9 @@ export default function StudentDashboardIdPage() {
                     placeholder="例: 5000"
                     min={0}
                     max={999999}
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e6eef8",
-                      width: "200px",
-                    }}
+                    className={styles.editInputNumber}
                   />
-                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                  <div className={styles.editActions}>
                     <button
                       className={styles.secondaryBtn}
                       onClick={closeEditModal}
@@ -937,7 +936,7 @@ export default function StudentDashboardIdPage() {
           </div>
 
           <div className={styles.stats}>
-                        <article className={styles.stat}>
+            <article className={styles.stat}>
               <div className={styles["stat-label"]}>総学費</div>
               <div className={styles["stat-value"]}>
                 {reducedTotal.toLocaleString()}円
@@ -961,6 +960,20 @@ export default function StudentDashboardIdPage() {
                 {remaining.toLocaleString()}円
               </div>
             </article>
+            {typeof prevYearRemaining === "number" && prevYearRemaining > 0 && (
+              <article className={styles.stat}>
+                <div className={styles["stat-label"]}>
+                  前年度（
+                  {(new Date().getMonth() + 1 >= 4
+                    ? new Date().getFullYear()
+                    : new Date().getFullYear() - 1) - 1}
+                  年度）の残り
+                </div>
+                <div className={styles["stat-value"]}>
+                  {prevYearRemaining.toLocaleString()}円
+                </div>
+              </article>
+            )}
           </div>
 
           <table className={styles.paymentTable}>
@@ -1081,115 +1094,55 @@ export default function StudentDashboardIdPage() {
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
 
-          <section
-            style={{
-              background: "#fff",
-              padding: 30,
-              borderRadius: 16,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              margin: "20px auto",
-              width: "100%",
-              maxWidth: 600,
-              textAlign: "center",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 25 }}>
+          <section className={styles.uploadSection}>
+            <div className={styles.uploadForm}>
               {/* 月額 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  月額
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>月額</label>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* 対象月 */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  対象月
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>対象月</label>
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadInput}
                 />
               </div>
 
               {/* ファイル */}
-              <div style={{ textAlign: "left", width: "100%" }}>
-                <label
-                  style={{ fontWeight: 600, marginBottom: 6, display: "block" }}
-                >
-                  ファイル
-                </label>
+              <div className={styles.uploadField}>
+                <label className={styles.uploadLabel}>ファイル</label>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    border: "1px solid #ddd",
-                    width: "100%",
-                    background: "#fafafa",
-                  }}
+                  className={styles.uploadFileInput}
                 />
               </div>
 
               {/* Centered Button */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  marginTop: 10,
-                }}
-              >
+              <div className={styles.uploadBtnWrap}>
                 <button
                   onClick={() => handleReceiptUpload(receiptMonth || undefined)}
                   disabled={uploading}
-                  style={{
-                    padding: "12px 0",
-                    width: "50%",
-                    maxWidth: 250,
-                    background: "#0070F3",
-                    color: "#fff",
-                    fontWeight: 700,
-                    borderRadius: 10,
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "center",
-                  }}
+                  className={styles.uploadBtn}
                 >
                   {uploading ? "アップロード中..." : "OK"}
                 </button>
               </div>
 
               {uploading && (
-                <div
-                  style={{ textAlign: "center", marginTop: 6, color: "#666" }}
-                >
+                <div className={styles.uploadProgress}>
                   進捗: {uploadProgress}%
                 </div>
               )}
@@ -1200,8 +1153,8 @@ export default function StudentDashboardIdPage() {
 
       {activeTab === "profile" && (
         <section className={styles.card}>
-          <h2>プロフィール</h2>
-          <h2 style={{ textAlign: "center" }}>プロフィール</h2>
+         
+       
           <div
             style={{
               padding: 12,

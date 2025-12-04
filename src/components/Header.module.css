@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid #e6e6e9;
   background: #fff;
   position: sticky;
@@ -66,7 +66,7 @@
     transform: translateY(-10px);
   }
 }
-@keyframes floatBrandGradient{
+@keyframes floatBrandGradient {
   0%,
   100% {
     transform: translateY(5px);
@@ -79,9 +79,35 @@
 .right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .user {
   font-weight: 600;
+}
+
+/* ------------------------------
+   Responsive (small screens)
+   ------------------------------ */
+@media (max-width: 640px) {
+  .header {
+    padding: 10px 12px;
+  }
+  .logoRow {
+    gap: 8px;
+  }
+  .logoDot {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  .brandGradient {
+    font-size: 16px;
+  }
+  .right {
+    gap: 8px;
+  }
+  .user {
+    display: none; /* keep actions visible, hide long names */
+  }
 }

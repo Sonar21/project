@@ -33,7 +33,9 @@ export default function ImageUpload() {
     uploadTask.on(
       "state_changed",
       (snapshot) => {
-        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+        const pct = Math.round(
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+        );
         setProgress(pct);
       },
       (err) => {
@@ -70,7 +72,10 @@ export default function ImageUpload() {
       {url && (
         <div style={{ marginTop: 12 }}>
           <div>
-            Uploaded URL: <a href={url} target="_blank" rel="noreferrer">{url}</a>
+            Uploaded URL:{" "}
+            <a href={url} target="_blank" rel="noreferrer">
+              {url}
+            </a>
           </div>
           <div style={{ marginTop: 8 }}>
             <Image
@@ -78,7 +83,8 @@ export default function ImageUpload() {
               alt="uploaded"
               width={600}
               height={400}
-              style={{ maxWidth: "50%", height: "auto" }}
+              style={{ maxWidth: "100%", height: "auto" }}
+              sizes="(max-width: 640px) 100vw, 600px"
               unoptimized
             />
           </div>

@@ -211,64 +211,66 @@ export default function CoursesPage() {
         </button>
       </header>
 
-      <table className="courses-table">
-        <thead>
-          <tr>
-            <th>No</th>
-            <th>コース名</th>
-            <th>学費</th>
-            <th>月額</th>
-            <th>学生数</th>
-            <th>学年</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredCourses.map((c, index) => (
-            <tr key={c.id}>
-              <td>{index + 1}</td>
-              <td>
-                {/* {c.nameJa && c.nameEn
+      <div className="table-card">
+        <table className="courses-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>コース名</th>
+              <th>学費</th>
+              <th>月額</th>
+              <th>学生数</th>
+              <th>学年</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredCourses.map((c, index) => (
+              <tr key={c.id}>
+                <td>{index + 1}</td>
+                <td className="course-name">
+                  {/* {c.nameJa && c.nameEn
     ? ${c.nameJa} / ${c.nameEn}
     : c.name || c.nameJa || c.nameEn || c.courseKey || c.id} */}
-                <Link
-                  href={`/teacher/dashboard/course/${c.id}`}
-                  className="course-link"
-                >
-                  {c.nameJa && c.nameEn
-                    ? `${c.nameJa} / ${c.nameEn}`
-                    : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
-                </Link>
-              </td>
-              <td>{c.fee}</td>
-              <td>
-                {c.pricePerMonth
-                  ? `¥${Number(c.pricePerMonth).toLocaleString()}`
-                  : c.permonth
-                  ? c.permonth
-                  : "-"}
-              </td>
-              <td>{c.students ?? 0}</td>
-              <td>{c.year}</td>
-              <td>
-                <Link
-                  // href={`/teacher/dashboard/course/${c.courseKey ?? c.id}/edit`}
-                  href={`/teacher/dashboard/course/${c.id}/edit`}
-                  className="view-btn"
-                >
-                  編集
-                </Link>
-                <button
-                  className="delete-btn"
-                  onClick={() => handleDeleteCourse(c.id)}
-                >
-                  削除
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                  <Link
+                    href={`/teacher/dashboard/course/${c.id}`}
+                    className="course-link"
+                  >
+                    {c.nameJa && c.nameEn
+                      ? `${c.nameJa} / ${c.nameEn}`
+                      : c.name || c.nameJa || c.nameEn || c.courseKey || c.id}
+                  </Link>
+                </td>
+                <td data-hide-mobile="true">{c.fee}</td>
+                <td data-hide-mobile="true">
+                  {c.pricePerMonth
+                    ? `¥${Number(c.pricePerMonth).toLocaleString()}`
+                    : c.permonth
+                    ? c.permonth
+                    : "-"}
+                </td>
+                <td>{c.students ?? 0}</td>
+                <td className="course-year">{c.year}</td>
+                <td>
+                  <Link
+                    // href={`/teacher/dashboard/course/${c.courseKey ?? c.id}/edit`}
+                    href={`/teacher/dashboard/course/${c.id}/edit`}
+                    className="view-btn"
+                  >
+                    編集
+                  </Link>
+                  <button
+                    className="delete-btn"
+                    onClick={() => handleDeleteCourse(c.id)}
+                  >
+                    削除
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* ✅ 新しいコース追加モーダル */}
       {isModalOpen && (

@@ -1,14 +1,8 @@
-:root {
-  --muted: #777;
-  /* --border: #e5e5e5;
-  --bg-light: #fafafa;
-  --bg-hover: #f1f1f1;
-  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08); */
-}
+/* CSS variables moved to globals.css :root to satisfy CSS Modules purity. */
 
 /* ======= Layout ======= */
 .container {
-  display: flex;
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 16px;
   margin-top: 16px;
@@ -40,11 +34,25 @@
   box-shadow: var(--shadow);
   background: white;
   transition: transform 0.15s ease, box-shadow 0.2s ease;
+  margin-right: 60px;
 }
 
 .thumb:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Responsive: tighter grid on small screens */
+@media (max-width: 480px) {
+  .container {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+  }
+  .thumb,
+  .placeholder {
+    width: 80px;
+    height: 80px;
+  }
 }
 
 /* ======= Placeholder ======= */
