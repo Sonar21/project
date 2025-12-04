@@ -2,6 +2,8 @@
   background: #f6f7fb;
   padding: 20px;
   border-radius: 10px;
+  max-width: 980px;
+  margin: 0 auto;
 }
 
 .courses-header {
@@ -19,6 +21,7 @@
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
+  box-shadow: 0 2px 6px rgba(43, 155, 255, 0.12);
 }
 
 .add-btn:hover {
@@ -33,6 +36,12 @@
   overflow: hidden;
 }
 
+.table-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.06);
+}
+
 .courses-table th,
 .courses-table td {
   padding: 12px 15px;
@@ -40,37 +49,52 @@
   border-bottom: 1px solid #eee;
 }
 
+/* Ensure action buttons share consistent sizing and alignment */
+.view-btn,
+.delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 10px;
+  line-height: 1;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
 .courses-table th {
   background-color: #f0f4fa;
   font-weight: 600;
   color: #333;
+  font-size: 13px;
+  border-bottom: 1px solid #eef2f6;
 }
 
 .view-btn {
   color: white;
-  background-color: #4f9dde;
+  background-color: #3b82f6;
   border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   text-decoration: none;
   margin-right: 8px;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.08);
 }
 
 .view-btn:hover {
-  background-color: #3d7fc0;
+  background-color: #2563eb;
 }
 
 .delete-btn {
-  color: white;
-  background-color: #f56565;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
+  color: #ef4444;
+  background: #fff;
+  border: 1px solid #fee2e2;
   cursor: pointer;
+  border-radius: 8px;
 }
 
 .delete-btn:hover {
-  background-color: #d94c4c;
+  background-color: #fff6f6;
 }
 
 /* Modal */
@@ -163,6 +187,153 @@
   }
   .month-row label {
     width: 90px;
+  }
+}
+
+/* Mobile: transform table into stacked cards for readability */
+@media (max-width: 520px) {
+  /* layout tweaks */
+  .courses-page {
+    padding: 12px;
+  }
+
+  .courses-header {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .filter-tabs {
+    order: 1;
+  }
+  .add-btn {
+    order: 2;
+    margin-left: auto;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .courses-table,
+  .courses-table thead,
+  .courses-table tbody,
+  .courses-table th,
+  .courses-table td,
+  .courses-table tr {
+    display: block;
+  }
+
+  .courses-table thead {
+    display: none;
+  }
+
+  .courses-table tr {
+    background: #fff;
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    position: relative;
+  }
+
+  .courses-table td {
+    padding: 6px 12px;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Left label for each value */
+  .courses-table td:before {
+    content: attr(data-label);
+    color: #6b7280;
+    font-size: 12px;
+    min-width: 78px;
+    display: inline-block;
+    text-align: left;
+  }
+
+  /* Course name becomes a prominent block */
+  .courses-table td.course-name {
+    display: block;
+    padding: 6px 0 10px 0;
+  }
+  .courses-table td.course-name:before {
+    display: none;
+  }
+  .courses-table td.course-name .course-link {
+    font-weight: 700;
+    color: #1e40af;
+    font-size: 15px;
+    display: inline-block;
+  }
+
+  /* Hide less important columns entirely on mobile for clarity */
+  .courses-table td[data-hide-mobile="true"] {
+    display: none;
+  }
+
+  /* Show year as a small badge in the top-right of the card */
+  .courses-table td.course-year {
+    position: absolute;
+    right: 14px;
+    top: 12px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 12px;
+  }
+
+  /* Actions: compact pill buttons */
+  /* Actions: place buttons under the jlpt / metadata block (stacked row) */
+  .courses-table td:last-child {
+    display: block;
+    width: 100%;
+    text-align: right; /* align buttons to the right on their own line */
+    margin-top: 8px;
+  }
+  .view-btn,
+  .delete-btn {
+    display: inline-block;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 999px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .delete-btn {
+    background: #fff;
+    color: #ef4444;
+    border: 1px solid #fee2e2;
+    box-shadow: none;
+  }
+  .view-btn {
+    background: #1e40af;
+  }
+}
+
+/* Add data-label attributes via CSS fallback for browsers where JS didn't add them */
+@media (max-width: 520px) {
+  .courses-table tr td:nth-child(1):before {
+    content: "No";
+  }
+  .courses-table tr td:nth-child(2):before {
+    content: "コース名";
+  }
+  .courses-table tr td:nth-child(3):before {
+    content: "学費";
+  }
+  .courses-table tr td:nth-child(4):before {
+    content: "月額";
+  }
+  .courses-table tr td:nth-child(5):before {
+    content: "学生数";
+  }
+  .courses-table tr td:nth-child(6):before {
+    content: "学年";
+  }
+  .courses-table tr td:nth-child(7):before {
+    content: "操作";
   }
 }
 
