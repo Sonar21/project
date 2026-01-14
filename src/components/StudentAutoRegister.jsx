@@ -230,23 +230,9 @@ export default function StudentAutoRegister() {
           await runTransaction(db, async (transaction) => {
             const sSnap = await transaction.get(studentRef);
             if (sSnap.exists()) return; // created concurrently
+        
 
-            const payload = {
-              studentId,
-              email,
-              name,
-              nameKana: "",
-              startMonth: new Date().toISOString().slice(0, 7),
-              courseId: courseKey,
-              courseKey,
-              courseDocId: resolvedCourseDocId,
-              entranceYear,
-              grade: gradeEN,
-              gradeJP,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            };
-
+            
             transaction.set(studentRef, payload);
 
             if (resolvedCourseDocId) {
