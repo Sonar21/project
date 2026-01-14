@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import styles from "./ReceiptList.module.css";
-// import Img from "next.image";
 
 // payments: array of { id, amount, receiptUrl, receiptBase64, createdAt }
 export default function ReceiptList({ payments = [] }) {
@@ -16,7 +16,7 @@ export default function ReceiptList({ payments = [] }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  if (!payments || payments.length === 0) return <span>-</span>;
+  if (!payments || payments.length === 0) return;
 
   const open = (src) => setSelected(src);
   const close = () => setSelected(null);
@@ -27,9 +27,12 @@ export default function ReceiptList({ payments = [] }) {
         {payments.map((p) => {
           const src = p.receiptBase64 || p.receiptUrl || null;
           return (
-            <div key={p.id || p.receiptUrl || Math.random()} className={styles.item}>
+            <div
+              key={p.id || p.receiptUrl || Math.random()}
+              className={styles.item}
+            >
               {src ? (
-                <img
+                <Image
                   src={src}
                   alt={`receipt-${p.id || "img"}`}
                   className={styles.thumb}
@@ -39,6 +42,8 @@ export default function ReceiptList({ payments = [] }) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") open(src);
                   }}
+                  width={200}
+                  height={200}
                 />
               ) : (
                 <div className={styles.placeholder}>
@@ -55,12 +60,30 @@ export default function ReceiptList({ payments = [] }) {
       </div>
 
       {selected && (
-        <div className={styles.modal} onClick={close} role="dialog" aria-modal="true">
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <button className={styles.closeBtn} onClick={close} aria-label="閉じる">
+        <div
+          className={styles.modal}
+          onClick={close}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className={styles.closeBtn}
+              onClick={close}
+              aria-label="閉じる"
+            >
               ×
             </button>
-            <img src={selected} alt="receipt-large" className={styles.modalImage} />
+            <Image
+              src={selected}
+              alt="receipt-large"
+              className={styles.modalImage}
+              width={600}
+              height={600}
+            />
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { db } from "@/firebase/clientApp";
+import { getAcademicYear, getGradeInfo } from "@/lib/academicYear";
 import StudentAutoRegister from "@/components/StudentAutoRegister";
 import {
   doc,
@@ -221,10 +222,7 @@ export default function StudentDashboardPage() {
     (async () => {
       try {
         const today = new Date();
-        const academicYear =
-          today.getMonth() + 1 >= 4
-            ? today.getFullYear()
-            : today.getFullYear() - 1;
+        const academicYear = getAcademicYear(today);
 
         // Determine entranceYear from stored student or parse from studentId
         const parsedYearCode = parseInt(
@@ -236,7 +234,7 @@ export default function StudentDashboardPage() {
         if (parsedEntranceYear > academicYear) parsedEntranceYear -= 100;
         const entranceYear = student.entranceYear || parsedEntranceYear;
 
-        const gradeNum = academicYear - entranceYear + 1;
+        const { gradeNum } = getGradeInfo(entranceYear, today);
 
         // previous academic year to consider (the year that just finished if student promoted)
         const prevAcademicYear = academicYear - 1;
@@ -390,31 +388,11 @@ export default function StudentDashboardPage() {
       if (!snap.exists()) {
         // compute entrance year and grade labels (EN/JP) based on studentId
         const yearCode = parseInt(String(studentId).slice(1, 3), 10);
-        const currentYear = new Date().getFullYear();
+        const today = new Date();
+        const academicYear = getAcademicYear(today);
         let entranceYear = 2000 + (Number.isFinite(yearCode) ? yearCode : 0);
-        if (entranceYear > currentYear) entranceYear -= 100;
-        const gradeNum = currentYear - entranceYear + 1;
-        const gradeMapJP = {
-          1: "1年生",
-          2: "2年生",
-          3: "3年生",
-          4: "4年生",
-        };
-        const gradeJP = gradeMapJP[gradeNum] || `${gradeNum}年生`;
-        const ordinal = (n) => {
-          if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
-          switch (n % 10) {
-            case 1:
-              return `${n}st`;
-            case 2:
-              return `${n}nd`;
-            case 3:
-              return `${n}rd`;
-            default:
-              return `${n}th`;
-          }
-        };
-        const gradeEN = `${ordinal(gradeNum)} Year`;
+        if (entranceYear > academicYear) entranceYear -= 100;
+        const { gradeJP, gradeEN } = getGradeInfo(entranceYear, today);
 
         // merge payload with any extra fields passed in
         const payload = {
@@ -559,8 +537,9 @@ export default function StudentDashboardPage() {
           const cohortDigits = sid.slice(1, 3);
           if (!Number.isNaN(Number(cohortDigits))) {
             const cohortFull = 2000 + Number(cohortDigits);
-            const nowYear = new Date().getFullYear();
-            displayStudentYearLocal = nowYear - cohortFull + 1;
+            const today = new Date();
+            const academicYear = getAcademicYear(today);
+            displayStudentYearLocal = academicYear - cohortFull + 1;
             if (displayStudentYearLocal < 1) displayStudentYearLocal = 1;
           }
         }
@@ -887,8 +866,9 @@ export default function StudentDashboardPage() {
       const cohortDigits = sid.slice(1, 3);
       if (!Number.isNaN(Number(cohortDigits))) {
         const cohortFull = 2000 + Number(cohortDigits);
-        const nowYear = new Date().getFullYear();
-        displayStudentYear = nowYear - cohortFull + 1;
+        const today = new Date();
+        const academicYear = getAcademicYear(today);
+        displayStudentYear = academicYear - cohortFull + 1;
         if (displayStudentYear < 1) displayStudentYear = 1;
       }
     }
@@ -1002,8 +982,7 @@ export default function StudentDashboardPage() {
                 {total.toLocaleString()}円
                 {discount > 0 && (
                   <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
-                    割引: -¥{discount.toLocaleString()}（元: ¥
-                    {baseTotal.toLocaleString()}）
+                    減免: -{discount.toLocaleString()}円（減免前金額: {baseTotal.toLocaleString()}円）
                   </div>
                 )}
               </div>
