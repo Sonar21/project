@@ -69,7 +69,7 @@
 
 .inputAmount {
   width: 120px;
-  text-align: center;
+  /* text-align: center; */
   padding: 6px 8px;
   border-radius: 6px;
   border: 1px solid var(--input-border);
@@ -94,6 +94,7 @@
 
 .receiptCell {
   padding: var(--pad);
+  margin-right: 16px;
 }
 .receiptCell img {
   width: 56px;
@@ -114,13 +115,15 @@
     #f97316,
     #fb923c
   ); /* default: unpaid (orange) */
+  min-width: 80px;
+  text-align: center;
 }
 
 /* status variants */
 .paid {
   background: linear-gradient(90deg, #10b981, #059669); /* green */
   color: #fff;
-  font-size: 8px;
+  font-size: 13px;
 }
 
 .partial {
@@ -180,5 +183,19 @@
   .id {
     font-size: 4px;
     margin: 60px;
+  }
+  .statusText {
+    min-width: 75px;
+    text-align: center;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .paid,
+  .partial,
+  .unpaid {
+    min-width: 60px;
+    text-align: center;
+    margin-right: 19px;
+  
   }
 }

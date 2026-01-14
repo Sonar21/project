@@ -8,6 +8,7 @@ import {
   isAllowedInstitutionEmail,
 } from "@/data/users";
 import admin, { adminDb } from "@/firebase/adminApp";
+import { getAcademicYear, getGradeInfo } from "@/lib/academicYear";
 
 // Define your auth options first
 export const authOptions = {
@@ -190,32 +191,15 @@ export const authOptions = {
                     .toLowerCase()
                     .trim();
                   const yearCode = parseInt(String(id).slice(1, 3), 10);
-                  const currentYear = new Date().getFullYear();
+                  const today = new Date();
+                  const academicYear = getAcademicYear(today);
                   let entranceYear =
                     2000 + (Number.isFinite(yearCode) ? yearCode : 0);
-                  if (entranceYear > currentYear) entranceYear -= 100;
-                  const gradeNum = currentYear - entranceYear + 1;
-                  const ordinal = (n) => {
-                    if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
-                    switch (n % 10) {
-                      case 1:
-                        return `${n}st`;
-                      case 2:
-                        return `${n}nd`;
-                      case 3:
-                        return `${n}rd`;
-                      default:
-                        return `${n}th`;
-                    }
-                  };
-                  const gradeEN = `${ordinal(gradeNum)} Year`;
-                  const gradeJP =
-                    {
-                      1: "1年生",
-                      2: "2年生",
-                      3: "3年生",
-                      4: "4年生",
-                    }[gradeNum] || `${gradeNum}年生`;
+                  if (entranceYear > academicYear) entranceYear -= 100;
+                  const { gradeEN, gradeJP } = getGradeInfo(
+                    entranceYear,
+                    today
+                  );
 
                   yearVal = gradeEN;
 

@@ -23,6 +23,7 @@ import styles from "./page.module.css";
 import receiptStyles from "@/components/ReceiptList.module.css";
 import PaymentSchedule from "@/components/PaymentSchedule";
 import migrateRemainingToNextYear from "@/lib/migrateYearTuition";
+import { getAcademicYear } from "@/lib/academicYear";
 import { useParams } from "next/navigation";
 
 // This file is a cleaned-up, single-shot-read variant of the student dashboard
@@ -403,8 +404,9 @@ export default function StudentDashboardIdPage() {
           const cohortDigits = sid.slice(1, 3);
           if (!Number.isNaN(Number(cohortDigits))) {
             const cohortFull = 2000 + Number(cohortDigits);
-            const nowYear = new Date().getFullYear();
-            displayStudentYearLocal = nowYear - cohortFull + 1;
+            const today = new Date();
+            const academicYear = getAcademicYear(today);
+            displayStudentYearLocal = academicYear - cohortFull + 1;
             if (displayStudentYearLocal < 1) displayStudentYearLocal = 1;
           }
         }
@@ -539,10 +541,7 @@ export default function StudentDashboardIdPage() {
     (async () => {
       try {
         const today = new Date();
-        const academicYear =
-          today.getMonth() + 1 >= 4
-            ? today.getFullYear()
-            : today.getFullYear() - 1;
+        const academicYear = getAcademicYear(today);
 
         // Determine entranceYear from stored student or parse from studentId
         const parsedYearCode = parseInt(
@@ -666,8 +665,9 @@ export default function StudentDashboardIdPage() {
       const cohortDigits = sid.slice(1, 3);
       if (!Number.isNaN(Number(cohortDigits))) {
         const cohortFull = 2000 + Number(cohortDigits);
-        const nowYear = new Date().getFullYear();
-        displayStudentYear = nowYear - cohortFull + 1;
+        const today = new Date();
+        const academicYear = getAcademicYear(today);
+        displayStudentYear = academicYear - cohortFull + 1;
         if (displayStudentYear < 1) displayStudentYear = 1;
       }
     }
@@ -760,7 +760,7 @@ export default function StudentDashboardIdPage() {
           }`}
           onClick={() => setActiveTab("profile")}
         >
-          プロフィール 
+          プロフィール
         </button>
       </header>
 
@@ -1153,8 +1153,6 @@ export default function StudentDashboardIdPage() {
 
       {activeTab === "profile" && (
         <section className={styles.card}>
-         
-       
           <div
             style={{
               padding: 12,

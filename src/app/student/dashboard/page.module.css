@@ -294,16 +294,16 @@
   margin-top: 8px;
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: blue;
   text-align: center;
 }
 
 .stat-value.paid {
-  color: var(--success);
+  color: green;
 }
 
 .stat-value.remain {
-  color: var(--warn);
+  color: red;
 }
 
 /* 支払い状態用の単体クラス（モジュールで利用するため） */

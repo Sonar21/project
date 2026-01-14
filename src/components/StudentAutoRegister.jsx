@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { db } from "@/firebase/clientApp";
+import { getAcademicYear, getGradeInfo } from "@/lib/academicYear";
 import {
   doc,
   setDoc,
@@ -80,42 +81,16 @@ export default function StudentAutoRegister() {
             // For existing students: re-calculate grade on every login using
             // academic year that starts in April, but do NOT adjust course counts.
             const existing = snap.data() || {};
-
             // Determine entranceYear: prefer stored value, fallback to parse from id
             const parsedYearCode = parseInt(String(studentId).slice(1, 3), 10);
             let parsedEntranceYear =
               2000 + (Number.isFinite(parsedYearCode) ? parsedYearCode : 0);
             const today = new Date();
-            const academicYear =
-              today.getMonth() + 1 >= 4
-                ? today.getFullYear()
-                : today.getFullYear() - 1;
+            const academicYear = getAcademicYear(today);
             if (parsedEntranceYear > academicYear) parsedEntranceYear -= 100;
 
             const entranceYear = existing.entranceYear || parsedEntranceYear;
-
-            const gradeNum = academicYear - entranceYear + 1;
-            const gradeMapJP = {
-              1: "1年生",
-              2: "2年生",
-              3: "3年生",
-              4: "4年生",
-            };
-            const gradeJP = gradeMapJP[gradeNum] || `${gradeNum}年生`;
-            const ordinal = (n) => {
-              if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
-              switch (n % 10) {
-                case 1:
-                  return `${n}st`;
-                case 2:
-                  return `${n}nd`;
-                case 3:
-                  return `${n}rd`;
-                default:
-                  return `${n}th`;
-              }
-            };
-            const gradeEN = `${ordinal(gradeNum)} Year`;
+            const { gradeJP, gradeEN } = getGradeInfo(entranceYear, today);
 
             // Prepare updates: update name minimally and update grade fields if changed.
             const updates = {};
@@ -146,34 +121,10 @@ export default function StudentAutoRegister() {
           // compute entranceYear and grade labels (academic year starts in April)
           const yearCode = parseInt(String(studentId).slice(1, 3), 10);
           const today = new Date();
-          const academicYear =
-            today.getMonth() + 1 >= 4
-              ? today.getFullYear()
-              : today.getFullYear() - 1;
+          const academicYear = getAcademicYear(today);
           let entranceYear = 2000 + (Number.isFinite(yearCode) ? yearCode : 0);
           if (entranceYear > academicYear) entranceYear -= 100;
-          const gradeNum = academicYear - entranceYear + 1;
-          const gradeMapJP = {
-            1: "1年生",
-            2: "2年生",
-            3: "3年生",
-            4: "4年生",
-          };
-          const gradeJP = gradeMapJP[gradeNum] || `${gradeNum}年生`;
-          const ordinal = (n) => {
-            if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
-            switch (n % 10) {
-              case 1:
-                return `${n}st`;
-              case 2:
-                return `${n}nd`;
-              case 3:
-                return `${n}rd`;
-              default:
-                return `${n}th`;
-            }
-          };
-          const gradeEN = `${ordinal(gradeNum)} Year`;
+          const { gradeJP, gradeEN } = getGradeInfo(entranceYear, today);
 
           const name = session.user?.name || "未設定";
 
