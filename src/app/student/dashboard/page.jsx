@@ -1119,62 +1119,67 @@ export default function StudentDashboardPage() {
       {activeTab === "upload" && (
         <section className={styles.card}>
           <h2>レシートをアップロード</h2>
-
-          <section className={styles.uploadSection}>
-            <div className={styles.uploadForm}>
-              {/* 月額 */}
-              <div className={styles.uploadField}>
-                <label className={styles.uploadLabel}>月額</label>
+          <div
+            style={{
+              marginTop: 4,
+              padding: 12,
+              border: "1px solid #eee",
+              borderRadius: 8,
+              background: "#fff",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <label>
+                金額:
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="例: 86000"
-                  className={styles.uploadInput}
+                  style={{ marginLeft: 8 }}
                 />
-              </div>
+              </label>
 
-              {/* 対象月 */}
-              <div className={styles.uploadField}>
-                <label className={styles.uploadLabel}>対象月</label>
+              <label>
+                対象月:
                 <input
                   type="month"
                   value={receiptMonth}
                   onChange={(e) => setReceiptMonth(e.target.value)}
-                  className={styles.uploadInput}
+                  style={{ marginLeft: 8 }}
                 />
-              </div>
+              </label>
 
-              {/* ファイル */}
-              <div className={styles.uploadField}>
-                <label className={styles.uploadLabel}>ファイル</label>
+              <label>
+                ファイル:
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFile(e.target.files && e.target.files[0])}
-                  className={styles.uploadFileInput}
+                  style={{ marginLeft: 8 }}
                 />
-              </div>
+              </label>
 
-              {/* Centered Button */}
-              <div className={styles.uploadBtnWrap}>
-                <button
-                  onClick={() => handleReceiptUpload(receiptMonth || undefined)}
-                  disabled={uploading}
-                  className={styles.uploadBtn}
-                >
-                  {uploading ? "アップロード中..." : "OK"}
-                </button>
-              </div>
-
+              <button
+                onClick={() => handleReceiptUpload(receiptMonth || undefined)}
+                disabled={uploading}
+              >
+                {uploading ? "アップロード中..." : "OK"}
+              </button>
               {uploading && (
-                <div className={styles.uploadProgress}>
-                  進捗: {uploadProgress}%
-                </div>
+                <div style={{ marginLeft: 8 }}>進捗: {uploadProgress}%</div>
               )}
             </div>
+            </div>
           </section>
-        </section>
+         
       )}
 
       {/* 🔹 プロフィールタブ */}
