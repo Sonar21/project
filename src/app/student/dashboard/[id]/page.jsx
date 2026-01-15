@@ -218,9 +218,10 @@ export default function StudentDashboardIdPage() {
     return () => unsub();
   }, [student?.id]);
 
-  const validateReasonNoDigits = (str) => {
+  // Allow digits in reason; only validate non-empty string
+  const validateReason = (str) => {
     if (!str) return false;
-    return !/\d/.test(str);
+    return String(str).trim().length > 0;
   };
 
   const handleAddDiscount = async () => {
@@ -231,8 +232,7 @@ export default function StudentDashboardIdPage() {
     const amountNum = Number(newAmount);
 
     if (!reason) return alert("割引理由を入力してください。");
-    if (!validateReasonNoDigits(reason))
-      return alert("割引理由に数字は含めないでください。");
+    if (!validateReason(reason)) return alert("割引理由を入力してください。");
 
     if (Number.isNaN(amountNum) || !isFinite(amountNum))
       return alert("割引額は数値で入力してください。");
@@ -297,8 +297,7 @@ export default function StudentDashboardIdPage() {
     const amountNum = Number(editAmount);
 
     if (!reason) return alert("割引理由を入力してください。");
-    if (!validateReasonNoDigits(reason))
-      return alert("割引理由に数字は含めないでください。");
+    if (!validateReason(reason)) return alert("割引理由を入力してください。");
     if (Number.isNaN(amountNum) || !isFinite(amountNum))
       return alert("割引額は数値で入力してください。");
     if (amountNum < 0 || amountNum > 999999)
@@ -786,14 +785,14 @@ export default function StudentDashboardIdPage() {
                           type="text"
                           value={newReason}
                           onChange={(e) => setNewReason(e.target.value)}
-                          placeholder="割引理由（数字禁止）"
+                          placeholder="減免理由"
                           className={styles.discountInput}
                         />
                         <input
                           type="number"
                           value={newAmount}
                           onChange={(e) => setNewAmount(e.target.value)}
-                          placeholder="割引額"
+                          placeholder="減免額"
                           min={0}
                           max={999999}
                           className={styles.discountAmount}
@@ -809,7 +808,7 @@ export default function StudentDashboardIdPage() {
                     </div>
                   ) : (
                     <div style={{ fontSize: 13, color: "#374151" }}>
-                      合計割引: {totalDiscount.toLocaleString()}円
+                      合計減免: {totalDiscount.toLocaleString()}円
                     </div>
                   )}
                 </div>
@@ -819,10 +818,10 @@ export default function StudentDashboardIdPage() {
 
           {/* Discount items list (real-time) */}
           <div className={styles.discountSection}>
-            <strong>割引履歴</strong>
+            <strong>減免履歴</strong>
             <div className={styles.discountListBox}>
               {(!discounts || discounts.length === 0) && (
-                <div style={{ color: "#666" }}>割引はありません。</div>
+                <div style={{ color: "#666" }}>減免はありません。</div>
               )}
               {(discounts || []).map((d) => (
                 <div key={d.id} className={styles.discountItem}>
@@ -877,12 +876,12 @@ export default function StudentDashboardIdPage() {
                 onClick={(e) => e.stopPropagation()}
                 className={styles.editModalContent}
               >
-                <h3 style={{ marginTop: 0 }}>割引を編集</h3>
+                <h3 style={{ marginTop: 0 }}>減免を編集</h3>
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 12 }}
                 >
                   <label style={{ fontSize: 13, fontWeight: 600 }}>
-                    割引理由（数字禁止）
+                    減免理由
                   </label>
                   <input
                     type="text"
@@ -892,7 +891,7 @@ export default function StudentDashboardIdPage() {
                     className={styles.editInputText}
                   />
                   <label style={{ fontSize: 13, fontWeight: 600 }}>
-                    割引額
+                    減免額
                   </label>
                   <input
                     type="number"
