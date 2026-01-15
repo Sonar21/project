@@ -2,11 +2,8 @@
   background: #f6f7fb;
   padding: 20px;
   border-radius: 10px;
-
   max-width: 980px;
   margin: 0 auto;
-
-
 }
 
 .courses-header {
@@ -70,27 +67,18 @@
   background-color: #f0f4fa;
   font-weight: 600;
   color: #333;
-
   font-size: 13px;
   border-bottom: 1px solid #eef2f6;
-
 }
 
 .view-btn {
   color: white;
   background-color: #3b82f6;
   border: none;
-
   border-radius: 8px;
   text-decoration: none;
   margin-right: 8px;
   box-shadow: 0 1px 2px rgba(59, 130, 246, 0.08);
-
-  padding: 6px 12px;
-  border-radius: 6px;
-  text-decoration: none;
-  margin-right: 8px;
-
 }
 
 .view-btn:hover {
@@ -98,27 +86,15 @@
 }
 
 .delete-btn {
-
   color: #ef4444;
   background: #fff;
   border: 1px solid #fee2e2;
-
-  color: white;
-  background-color: #f56565;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-
   cursor: pointer;
   border-radius: 8px;
 }
 
 .delete-btn:hover {
-
   background-color: #fff6f6;
-
-  background-color: #d94c4c;
-
 }
 
 /* Modal */
@@ -418,5 +394,4 @@
 .filter-tabs button.active {
   background: #007bff;
   color: white;
-
 }
