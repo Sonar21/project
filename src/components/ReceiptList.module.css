@@ -34,6 +34,7 @@
   box-shadow: var(--shadow);
   background: white;
   transition: transform 0.15s ease, box-shadow 0.2s ease;
+  margin-right: 60px;
 }
 
 .thumb:hover {

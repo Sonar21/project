@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import {
-  collection,
-  query,
-  where,
-  doc,
-  deleteDoc,
-  onSnapshot,
-  getDoc,
-} from "firebase/firestore";
+// import {
+//   collection,
+//   query,
+//   where,
+//   doc,
+//   deleteDoc,
+//   onSnapshot,
+//   getDoc,
+  
+// } from "firebase/firestore";
+import { runTransaction, doc, collection, getDocs, query, where, deleteDoc,onSnapshot } from "firebase/firestore";
+
 import { db } from "@/firebase/clientApp";
 import Link from "next/link";
 import "./detail.css";
@@ -395,16 +398,49 @@ export default function CourseDetailPage() {
     return true;
   });
 
-  const handleDeleteStudent = async (studentId) => {
-    if (!window.confirm("この学生を削除しますか？")) return;
-    try {
-      await deleteDoc(doc(db, "students", studentId));
-      alert("学生を削除しました。");
-    } catch (err) {
-      console.error("削除エラー:", err);
-      alert("削除に失敗しました。");
-    }
-  };
+  // const handleDeleteStudent = async (studentId) => {
+  //   if (!window.confirm("この学生を削除しますか？")) return;
+  //   try {
+  //     await deleteDoc(doc(db, "students", studentId));
+  //     alert("学生を削除しました。");
+  //   } catch (err) {
+  //     console.error("削除エラー:", err);
+  //     alert("削除に失敗しました。");
+  //   }
+  // };
+ const handleDeleteStudent = async (studentId) => {
+  if (!window.confirm("この学生を削除しますか？")) return;
+  try {
+    // Delete the student document
+    await deleteDoc(doc(db, "students", studentId));
+
+    // Recount students for this course (by courseId and courseDocId for safety)
+    const studentsRef = collection(db, "students");
+    const q1 = query(studentsRef, where("courseId", "==", id));
+    const q2 = query(studentsRef, where("courseDocId", "==", id));
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    // Use a Set to avoid double-counting students that match both queries
+    const uniqueStudentIds = new Set();
+    snap1.forEach(doc => uniqueStudentIds.add(doc.id));
+    snap2.forEach(doc => uniqueStudentIds.add(doc.id));
+    const newCount = uniqueStudentIds.size;
+
+    // Update the course document with the new count
+    const courseRef = doc(db, "courses", id);
+    await runTransaction(db, async (transaction) => {
+      const courseDoc = await transaction.get(courseRef);
+      if (!courseDoc.exists()) return;
+      transaction.update(courseRef, {
+        students: newCount,
+      });
+    });
+    // Optionally, show a success message
+    // alert("学生を削除し、学生数を更新しました。");
+  } catch (err) {
+    console.error("Failed to delete student or update count:", err);
+    alert("削除に失敗しました。");
+  }
+};
 
   return (
     <div className="course-detail-page">
