@@ -12,11 +12,24 @@ export function getAcademicYear(date = new Date()) {
 // date (defaults to today).
 export function getGradeInfo(entranceYear, date = new Date()) {
   const academicYear = getAcademicYear(date);
-  if (!Number.isFinite(entranceYear)) {
+  // Normalize entranceYear: accept numeric or numeric-string input.
+  const parsed = Number(entranceYear);
+  if (!Number.isFinite(parsed)) {
     return { academicYear, gradeNum: null, gradeJP: null, gradeEN: null };
   }
 
-  const gradeNum = academicYear - entranceYear + 1;
+  // If entranceYear is two-digit (e.g. 24), convert to 2000 + yy.
+  let normalizedEntranceYear = parsed;
+  if (parsed >= 0 && parsed <= 99) {
+    normalizedEntranceYear = 2000 + parsed;
+  }
+
+  // Ensure a reasonable 4-digit year.
+  if (normalizedEntranceYear < 1000) {
+    return { academicYear, gradeNum: null, gradeJP: null, gradeEN: null };
+  }
+
+  const gradeNum = academicYear - normalizedEntranceYear + 1;
   const gradeMapJP = {
     1: "1年生",
     2: "2年生",
@@ -42,4 +55,13 @@ export function getGradeInfo(entranceYear, date = new Date()) {
   const gradeEN = `${ordinal(gradeNum)} Year`;
 
   return { academicYear, gradeNum, gradeJP, gradeEN };
+}
+
+// Helper: derive 4-digit entrance year from a student ID like 'w24011'.
+// Returns a number (e.g. 2024) or null if it cannot be parsed.
+export function getEntranceYearFromStudentId(studentId) {
+  if (typeof studentId !== "string" || studentId.length < 3) return null;
+  const yy = Number(studentId.slice(1, 3));
+  if (!Number.isFinite(yy)) return null;
+  return 2000 + yy;
 }
