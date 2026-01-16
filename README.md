@@ -25,17 +25,11 @@ Firebase Cloud Functions（Node.js）
 NextAuth
 
 ✨ 主な機能
-
 役割別ダッシュボード
-
 管理者
-
 教師
-
 学生
-
 支払いスケジュール管理
-
 領収書管理
 
 管理用 API
@@ -45,25 +39,6 @@ NextAuth
 ユーザー管理
 
 データ移行・クリーンアップ用スクリプト
-
-リポジトリ構成
-
-├─ src/
-│  ├─ app/            # Next.js ルート・ページ（App Router）
-│  ├─ components/     # UI コンポーネント
-│  ├─ firebase/       # Firebase クライアント / Admin SDK 初期化
-│  ├─ lib/            # ヘルパー関数
-│  └─ api/            # API ルート
-│
-├─ functions/         # Firebase Cloud Functions
-├─ public/            # 静的アセット
-├─ scripts/           # データ移行・バックフィル用スクリプト
-│
-├─ package.json
-├─ next.config.mjs
-├─ tailwind.config.js
-├─ firestore.rules
-└─ firestore.indexes.json
 
 依存関係のインストール
 
