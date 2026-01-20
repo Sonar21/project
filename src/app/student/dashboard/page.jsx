@@ -43,6 +43,7 @@ export default function StudentDashboardPage() {
   const [amount, setAmount] = useState("");
   const [receiptMonth, setReceiptMonth] = useState("");
   const [payments, setPayments] = useState([]); // 🔹 支払い履歴を保存する配列
+  const [discounts, setDiscounts] = useState([]); // 🔹 教員が設定した減免（discounts）
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [prevYearRemaining, setPrevYearRemaining] = useState(null);
 
@@ -760,6 +761,34 @@ export default function StudentDashboardPage() {
     return () => unsub();
   }, [student?.studentId]);
 
+  // 🔹 教員が学生に割り当てた減免(discounts)をリアルタイムで取得
+  useEffect(() => {
+    if (!student?.studentId) return;
+    try {
+      const discountsRef = collection(
+        db,
+        "students",
+        String(student.studentId),
+        "discounts"
+      );
+      const q = query(discountsRef, orderBy("createdAt", "desc"));
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          const arr = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setDiscounts(arr);
+        },
+        (err) => {
+          console.error("discounts onSnapshot error:", err);
+        }
+      );
+      return () => unsub();
+    } catch (err) {
+      console.error("discounts subscription failed:", err);
+      setDiscounts([]);
+    }
+  }, [student?.studentId]);
+
   // 🔹 自動リマインダー計算: student.startMonth から現在までの月で未払いの月を見つける
   const computeMissingMonths = () => {
     if (!student) return [];
@@ -838,9 +867,13 @@ export default function StudentDashboardPage() {
       student?.totalFees ??
       0
   );
-  // If a teacher applied a flat discount on the student doc (e.g. 5000), apply it here.
-  const discount = Number(student?.discount ?? 0) || 0;
-  const total = Math.max(baseTotal - discount, 0);
+  // Students should not see teacher-applied discounts on their own dashboard.
+  // 教員が設定した減免（discounts）があれば学生ページにも総額へ反映する
+  const totalDiscount = (discounts || []).reduce(
+    (sum, d) => sum + (Number(d.amount) || 0),
+    0
+  );
+  const total = Math.max(baseTotal - totalDiscount, 0);
 
   // paid: sum of payments amounts from Firestore (real-time)
   const paidFromPayments = payments.reduce(
@@ -980,11 +1013,7 @@ export default function StudentDashboardPage() {
               <div className={styles["stat-label"]}>総学費</div>
               <div className={styles["stat-value"]}>
                 {total.toLocaleString()}円
-                {discount > 0 && (
-                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 6 }}>
-                    減免: -{discount.toLocaleString()}円（減免前金額: {baseTotal.toLocaleString()}円）
-                  </div>
-                )}
+                {/* 学生ページでは減免額を表示しない（先生向けの個別ページで表示します） */}
               </div>
             </article>
             <article className={styles.stat}>

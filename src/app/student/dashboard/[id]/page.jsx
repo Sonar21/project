@@ -805,12 +805,13 @@ export default function StudentDashboardIdPage() {
                           保存
                         </button>
                       </div>
+                      <div
+                        style={{ fontSize: 13, color: "#374151", marginTop: 8 }}
+                      >
+                        合計減免: {totalDiscount.toLocaleString()}円
+                      </div>
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 13, color: "#374151" }}>
-                      合計減免: {totalDiscount.toLocaleString()}円
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -947,12 +948,15 @@ export default function StudentDashboardIdPage() {
                 {paid.toLocaleString()}円
               </div>
             </article>
-            {/* <article className={styles.stat}>
-              <div className={styles["stat-label"]}>割引合計</div>
-              <div className={styles["stat-value"]}>
-                {totalDiscount.toLocaleString()}円
-              </div>
-            </article> */}
+            {session?.user &&
+              (session.user.isAdmin || session.user.role === "teacher") && (
+                <article className={styles.stat}>
+                  <div className={styles["stat-label"]}>割引合計</div>
+                  <div className={styles["stat-value"]}>
+                    {totalDiscount.toLocaleString()}円
+                  </div>
+                </article>
+              )}
             <article className={styles.stat}>
               <div className={styles["stat-label"]}>残り</div>
               <div className={`${styles["stat-value"]} ${styles.remain}`}>

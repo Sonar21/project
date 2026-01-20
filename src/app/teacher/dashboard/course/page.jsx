@@ -35,6 +35,8 @@ export default function CoursesPage() {
       10: "",
     },
     year: "1st Year",
+    // Explicit academic year to use for payment schedules (e.g. 2025 for Apr2025-Mar2026)
+    paymentAcademicYear: 2025,
   });
   const [activeYear, setActiveYear] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -109,6 +111,7 @@ export default function CoursesPage() {
       fee: newCourse.fee,
       pricePerMonth: parsedPrice,
       year: newCourse.year,
+      paymentAcademicYear: Number(newCourse.paymentAcademicYear) || null,
       students: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -153,6 +156,7 @@ export default function CoursesPage() {
           10: "",
         },
         year: "1st Year",
+        paymentAcademicYear: 2025,
       });
       setIsModalOpen(false);
     } catch (err) {
@@ -372,6 +376,23 @@ export default function CoursesPage() {
               <option value="1st Year">1st Year</option>
               <option value="2nd Year">2nd Year</option>
             </select>
+
+            <div className="payment-academic-year">
+              <label>
+                支払学年 (例: 2025 — 学年は Apr2025–Mar2026 の場合 2025)
+              </label>
+              <input
+                type="number"
+                placeholder="2025"
+                value={newCourse.paymentAcademicYear}
+                onChange={(e) =>
+                  setNewCourse({
+                    ...newCourse,
+                    paymentAcademicYear: Number(e.target.value) || null,
+                  })
+                }
+              />
+            </div>
 
             <div className="modal-actions">
               <button onClick={handleAddCourse} className="save-btn">
