@@ -689,155 +689,74 @@ export default function StudentDashboardIdPage() {
         <section className={styles.card}>
           <h1 className={styles.title}>支払い状況</h1>
           <div className={styles.infoBox}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ display: "block", marginBottom: 8 }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    marginLeft: 8,
-                    fontWeight: 600,
-                    fontSize: 13,
-                    color: "#0b1220",
-                  }}
-                >
+            <div className={styles.courseDiscountRow}>
+              <div className={styles.courseNameBox}>
+                <span className={styles.courseNameLabel}>
                   {courseDisplayName}
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  marginBottom: 12,
-                  alignItems: "center",
-                  gap: 12,
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  {session?.user &&
-                  (session.user.isAdmin || session.user.role === "teacher") ? (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "#374151",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        background: "#ffffff",
-                        padding: "8px",
-                        borderRadius: 10,
-                        border: "1px solid #e6e332",
-                      }}
-                    >
-                      {/* New discount inputs (single-line, per requirement) */}
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 8,
-                          alignItems: "center",
-                        }}
+              <div className={styles.discountInputWrapper}>
+                {session?.user &&
+                (session.user.isAdmin || session.user.role === "teacher") ? (
+                  <div className={styles.discountInputContainer}>
+                    <div className={styles.discountInputRow}>
+                      <input
+                        type="text"
+                        value={newReason}
+                        onChange={(e) => setNewReason(e.target.value)}
+                        placeholder="割引理由（数字禁止）"
+                        className={styles.discountReasonInput}
+                      />
+                      <input
+                        type="number"
+                        value={newAmount}
+                        onChange={(e) => setNewAmount(e.target.value)}
+                        placeholder="割引額"
+                        min={0}
+                        max={999999}
+                        className={styles.discountAmountInput}
+                      />
+                      <button
+                        className={styles.discountSaveBtn}
+                        onClick={handleAddDiscount}
+                        type="button"
                       >
-                        <input
-                          type="text"
-                          value={newReason}
-                          onChange={(e) => setNewReason(e.target.value)}
-                          placeholder="割引理由（数字禁止）"
-                          style={{
-                            width: 300,
-                            padding: "8px 10px",
-                            height: 36,
-                            borderRadius: 8,
-                            border: "1px solid #e6eef8",
-                            background: "#fff",
-                            color: "#0b1220",
-                          }}
-                        />
-                        <input
-                          type="number"
-                          value={newAmount}
-                          onChange={(e) => setNewAmount(e.target.value)}
-                          placeholder="割引額"
-                          min={0}
-                          max={999999}
-                          style={{
-                            width: 140,
-                            padding: "8px 10px",
-                            height: 36,
-                            borderRadius: 8,
-                            border: "1px solid #e6eef8",
-                            background: "#fff",
-                            color: "#0b1220",
-                          }}
-                        />
-                        <button
-                          className={styles.primaryBtn}
-                          onClick={handleAddDiscount}
-                          type="button"
-                          style={{
-                            padding: "8px 12px",
-                            background: "#2563eb",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 8,
-                            boxShadow: "0 2px 6px rgba(37,99,235,0.12)",
-                          }}
-                        >
-                          保存
-                        </button>
-                      </div>
+                        保存
+                      </button>
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 13, color: "#374151" }}>
-                      {/* 合計割引: {totalDiscount.toLocaleString()}円 */}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
 
           {/* Discount items list (real-time) */}
-          <div style={{ marginTop: 12, marginBottom: 12 }}>
+          <div className={styles.discountHistorySection}>
             <strong>割引履歴</strong>
-            <div
-              style={{
-                marginTop: 8,
-                background: "#fff",
-                borderRadius: 8,
-                border: "1px solid #efefef",
-                padding: 12,
-              }}
-            >
+            <div className={styles.discountHistoryList}>
               {(!discounts || discounts.length === 0) && (
-                <div style={{ color: "#666" }}>割引はありません。</div>
+                <div className={styles.emptyText}>割引はありません。</div>
               )}
               {(discounts || []).map((d) => (
-                <div
-                  key={d.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "8px 6px",
-                    borderBottom: "1px solid #f3f4f6",
-                  }}
-                >
-                  <div
-                    style={{ display: "flex", gap: 12, alignItems: "center" }}
-                  >
-                    <div style={{ minWidth: 220 }}>
-                      <div style={{ fontWeight: 700 }}>{d.reason}</div>
-                      <div style={{ fontSize: 12, color: "#6b7280" }}>
+                <div key={d.id} className={styles.discountItem}>
+                  <div className={styles.discountItemInfo}>
+                    <div className={styles.discountItemDetails}>
+                      <div className={styles.discountItemReason}>
+                        {d.reason}
+                      </div>
+                      <div className={styles.discountItemMeta}>
                         {d.teacher || "N/A"}
                         {d.createdAt
                           ? ` ・ ${formatTimestamp(d.createdAt)}`
                           : ""}
                       </div>
                     </div>
-                    <div style={{ fontWeight: 700 }}>
+                    <div className={styles.discountItemAmount}>
                       ¥{Number(d.amount || 0).toLocaleString()}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div className={styles.discountItemActions}>
                     <button
                       className={styles.secondaryBtn}
                       onClick={() => openEditModal(d)}
@@ -865,33 +784,16 @@ export default function StudentDashboardIdPage() {
             <div
               role="dialog"
               aria-modal="true"
-              style={{
-                position: "fixed",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "rgba(0,0,0,0.4)",
-                zIndex: 60,
-              }}
+              className={styles.modalOverlay}
               onClick={closeEditModal}
             >
               <div
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: 560,
-                  maxWidth: "95%",
-                  background: "#fff",
-                  borderRadius: 12,
-                  padding: 20,
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-                }}
+                className={styles.modalBox}
               >
-                <h3 style={{ marginTop: 0 }}>割引を編集</h3>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
-                >
-                  <label style={{ fontSize: 13, fontWeight: 600 }}>
+                <h3 className={styles.modalTitle}>割引を編集</h3>
+                <div className={styles.modalForm}>
+                  <label className={styles.modalLabel}>
                     割引理由（数字禁止）
                   </label>
                   <input
@@ -899,16 +801,9 @@ export default function StudentDashboardIdPage() {
                     value={editReason}
                     onChange={(e) => setEditReason(e.target.value)}
                     placeholder="例: 奨学金・成績優秀など"
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e6eef8",
-                      width: "100%",
-                    }}
+                    className={styles.modalInput}
                   />
-                  <label style={{ fontSize: 13, fontWeight: 600 }}>
-                    割引額
-                  </label>
+                  <label className={styles.modalLabel}>割引額</label>
                   <input
                     type="number"
                     value={editAmount}
@@ -916,21 +811,9 @@ export default function StudentDashboardIdPage() {
                     placeholder="例: 5000"
                     min={0}
                     max={999999}
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      border: "1px solid #e6eef8",
-                      width: "200px",
-                    }}
+                    className={styles.modalInputSmall}
                   />
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 8,
-                      justifyContent: "flex-end",
-                      marginTop: 8,
-                    }}
-                  >
+                  <div className={styles.modalActions}>
                     <button
                       className={styles.secondaryBtn}
                       onClick={closeEditModal}
@@ -990,6 +873,15 @@ export default function StudentDashboardIdPage() {
           </div>
 
           <table className={styles.paymentTable}>
+            <thead>
+              <tr>
+                <th scope="col">日付</th>
+                <th scope="col">時間</th>
+                <th scope="col">金額</th>
+                <th scope="col">支払い方法</th>
+                <th scope="col">レシート</th>
+              </tr>
+            </thead>
             <tbody>
               {payments.map((p) => {
                 const date = p.createdAt?.toDate
@@ -1002,11 +894,11 @@ export default function StudentDashboardIdPage() {
                 });
                 return (
                   <tr key={p.id}>
-                    <td>{formattedDate}</td>
-                    <td>{formattedTime}</td>
-                    <td>¥{p.amount?.toLocaleString()}</td>
-                    <td>{p.paymentMethod || "-"}</td>
-                    <td>
+                    <td data-label="日付">{formattedDate}</td>
+                    <td data-label="時間">{formattedTime}</td>
+                    <td data-label="金額">¥{p.amount?.toLocaleString()}</td>
+                    <td data-label="支払い方法">{p.paymentMethod || "-"}</td>
+                    <td data-label="レシート">
                       <div style={{ marginTop: 8 }}>
                         <div
                           style={{
