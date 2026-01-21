@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -35,7 +34,15 @@ export default function PaymentSchedule({
 
   const studentId = student?.studentId;
 
-  const determineScheduleYear = () => new Date().getFullYear();
+  const determineScheduleYear = () => {
+    // Always prefer explicit `paymentAcademicYear` from courseInfo (never rely on current year)
+    const val =
+      courseInfo?.paymentAcademicYear ??
+      (courseInfo?.payment && courseInfo.payment.paymentAcademicYear) ??
+      null;
+    if (val == null) return null;
+    return Number(val);
+  };
 
   // Fetch schedules once per page (deduped + cached). Also create missing
   // monthly documents without doing another full read (we build created
@@ -45,6 +52,29 @@ export default function PaymentSchedule({
       if (!studentId) return [];
 
       const year = targetYear || determineScheduleYear();
+      if (!year) {
+        console.warn(
+          "paymentAcademicYear is missing — cannot generate schedules without it."
+        );
+        // still set any existing schedules from the DB (but avoid creating missing months)
+        try {
+          const ref = collection(db, "students", studentId, "paymentSchedules");
+          const snapExisting = await getDocs(ref);
+          const filteredDocs = snapExisting.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((d) => typeof d.month === "string")
+            .sort((a, b) => a.month.localeCompare(b.month));
+          schedulesCache.set(`${studentId}-missing-year`, {
+            ts: Date.now(),
+            data: filteredDocs,
+          });
+          setSchedules(filteredDocs);
+          return filteredDocs;
+        } catch (e) {
+          console.warn("failed to read existing schedules:", e);
+          return [];
+        }
+      }
       const cacheKey = `${studentId}-${year}`;
       const now = Date.now();
 
@@ -345,7 +375,10 @@ export default function PaymentSchedule({
       )}
 
       <div className={styles.yearLabel}>
-        <strong>スケジュール年: {determineScheduleYear()}</strong>
+        <strong>
+          スケジュール年:{" "}
+          {determineScheduleYear() ? determineScheduleYear() : "未設定"}
+        </strong>
       </div>
 
       <div className={styles.tableWrap}>
